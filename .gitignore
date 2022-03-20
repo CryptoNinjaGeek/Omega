@@ -1,0 +1,6 @@
+.idea
+.DS*
+MakeFile
+cmake*
+CMakeFiles
+CMakeCache*
