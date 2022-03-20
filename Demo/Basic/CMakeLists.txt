@@ -4,5 +4,8 @@ project(Basic)
 set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Basic main.cpp)
-include_directories(Basic PUBLIC ../../Engine/Header )
+include_directories(Basic PUBLIC
+        ../../Engine/Geometry/Header
+        ../../Engine/Render/Header
+)
 target_link_libraries(Basic oEngine)

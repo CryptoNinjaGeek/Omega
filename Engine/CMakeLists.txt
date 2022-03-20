@@ -3,16 +3,28 @@ project(oEngine)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(oEngine
-        Source/OPoint2.cpp
-        Source/OPoint3.cpp
-        Source/OPlane.cpp
-        Source/OMatrix.cpp
-        Header/OPoint2.h
-        Header/OPoint3.h
-        Header/OMath.h
-        Header/OPlane.h
-        Header/OMatrix.h
-        Header/OPoint4.h Header/OBox.h Header/OSphere.h Header/OBoxBase.h)
+find_package(SDL2 REQUIRED)
 
-include_directories(oEngine PUBLIC Header)
+add_library(oEngine SHARED
+        Geometry/Source/OPoint2.cpp
+        Geometry/Source/OPoint3.cpp
+        Geometry/Source/OPlane.cpp
+        Geometry/Source/OMatrix.cpp
+        Geometry/Header/OPoint2.h
+        Geometry/Header/OPoint3.h
+        Geometry/Header/OMath.h
+        Geometry/Header/OPlane.h
+        Geometry/Header/OMatrix.h
+        Geometry/Header/OPoint4.h
+        Geometry/Header/OBox.h
+        Geometry/Header/OSphere.h
+        Geometry/Header/OBoxBase.h
+        Render/Source/OWindow.cpp Render/Header/OWindow.h)
+
+include_directories(oEngine PUBLIC
+        Geometry/Header
+        Render/Header
+        ${SDL2_INCLUDE_DIR}
+        )
+
+target_link_libraries(oEngine ${SDL2_LIBRARY})
