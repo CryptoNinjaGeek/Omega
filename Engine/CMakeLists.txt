@@ -19,7 +19,10 @@ add_library(oEngine SHARED
         Geometry/Header/OBox.h
         Geometry/Header/OSphere.h
         Geometry/Header/OBoxBase.h
-        Render/Source/OWindow.cpp Render/Header/OWindow.h)
+        Render/Source/OWindow.cpp
+        Render/Header/OWindow.h
+        Render/Source/OSystem.cpp
+        Render/Header/OSystem.h Render/Header/OKeyCodes.h)
 
 include_directories(oEngine PUBLIC
         Geometry/Header
