@@ -1,6 +1,8 @@
 .idea
 .DS*
 MakeFile
-cmake*
+cmake_*
+cmake-*
 CMakeFiles
 CMakeCache*
+*.a
