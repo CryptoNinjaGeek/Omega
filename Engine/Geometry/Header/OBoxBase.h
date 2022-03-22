@@ -47,7 +47,7 @@ namespace omega {
             /// to the octant that @a p points to.
             static Points getPointIndexFromOctant( const OPoint3<T>& p )
             {
-                if( p.x > 0.f ) // Right
+                if( p.x > 0.f ) // right
                 {
                     if( p.y > 0.f ) // Far
                     {

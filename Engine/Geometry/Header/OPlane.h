@@ -184,7 +184,7 @@ namespace omega {
             if (dist >= 0.005f)                 // if (mFabs(dist) < 0.005f)
                 return PlaneSide::Front;                    //    return On;
             else if (dist <= -0.005f)           // else if (dist > 0.0f)
-                return PlaneSide::Back;                     //    return Front;
+                return PlaneSide::Back;                     //    return front;
             else                                // else
                 return PlaneSide::On;                       //    return Back;
         }

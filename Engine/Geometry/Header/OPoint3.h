@@ -5,15 +5,17 @@
 #pragma once
 
 #include "OMath.h"
+#include <iostream>
+#include <iomanip>
 
 namespace omega {
     namespace geometry {
         template <class T>
         class OPoint3 {
         public:
-            T x;
-            T y;
-            T z;
+            T x = {};
+            T y = {};
+            T z = {};
 
         public:
             OPoint3();
@@ -33,6 +35,8 @@ namespace omega {
 
             operator T*() { return (&x); }
             operator const T*() const { return &x; }
+
+            void dump(char *title = nullptr);
 
         public:
             bool  isZero() const;
@@ -177,13 +181,16 @@ namespace omega {
         inline T OPoint3<T>::len() const
         {
             T temp = x*x + y*y + z*z;
-            return (temp > 0.0) ? mSqrtD(temp) : 0.0;
+            return (temp > 0.0) ? mSqrt(temp) : 0.0;
         }
 
         template <class T>
         inline void OPoint3<T>::normalize()
         {
-            m_point3D_normalize(*this);
+            T factor = 1.0f / mSqrt<T>(x*x + y*y + z*z );
+            x *= factor;
+            y *= factor;
+            z *= factor;
         }
 
         template <class T>
@@ -301,6 +308,15 @@ namespace omega {
             return OPoint3<T>(-x, -y, -z);
         }
 
+        template <class T>
+        inline void OPoint3<T>::dump(char *title)
+        {
+            if(title)
+                std::cout << std::fixed << std::setw(11) << std::setfill(' ') << title << " => ";
+
+            std::cout << x << " , " << y << " , " << z << std::endl;
+        }
+
 
         template <class T>
         inline OPoint3<T> operator*(T mul, const OPoint3<T>& multiplicand)
@@ -330,7 +346,50 @@ namespace omega {
             return r;
         }
 
-        typedef OPoint3<float> VectorF;
+        template <class T>
+        inline  OPoint3<T> mNormalize(const OPoint3<T> &p)
+        {
+            T factor = 1.0f / mSqrt<T>(p.x*p.x + p.y*p.y + p.z*p.z );
+            return OPoint3<T>( p.x * factor , p.y * factor , p.z * factor );
+        }
+
+        template <class T>
+        void GetXY(const OPoint3<T> &Z, OPoint3<T> &X, OPoint3<T> &Y)
+        {
+            if(Z.y == -1.0f)
+            {
+                X = OPoint3<T>(1.0f, 0.0f, 0.0f);
+                Y = OPoint3<T>(0.0f, 0.0f, 1.0f);
+            }
+            else if(Z.y > -1.0f && Z.y < 0.0f)
+            {
+                X = mCross(OPoint3<T>(0.0f, 1.0f, 0.0f), Z);
+                Y = mCross(Z, X);
+            }
+            else if(Z.y == 0.0f)
+            {
+                Y = OPoint3<T>(0.0f, 1.0f, 0.0f);
+                X = mCross(Y, Z);
+            }
+            else if(Z.y > 0.0f && Z.y < 1.0f)
+            {
+                X = mCross(OPoint3<T>(0.0f, 1.0f, 0.0f), Z);
+                Y = mCross(Z, X);
+            }
+            else if(Z.y == 1.0f)
+            {
+                X = OPoint3<T>(1.0f, 0.0f, 0.0f);
+                Y = OPoint3<T>(0.0f, 0.0f, -1.0f);
+            }
+        }
+
+        template <class T>
+        OPoint3<T> mRotate(const OPoint3<T> &u, float angle, const OPoint3<T> &v)
+        {
+            return (mRotate(angle, v) * u);
+        }
+
+        typedef OPoint3<float> OVector;
         typedef OPoint3<float> EulerF;
     }
 }

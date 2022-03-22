@@ -12,13 +12,14 @@ namespace omega {
     namespace geometry {
         template<class T>
         class OMatrix {
-        private:
+        public:
             T m[16];
 
         public:
             explicit OMatrix(bool identity = false);
             explicit OMatrix(const EulerF &e);
             OMatrix(const EulerF &e, const OPoint3<T> &p);
+            OMatrix(T m1,T m2,T m3,T m4,T m5,T m6,T m7,T m8,T m9,T m10,T m11,T m12,T m13,T m14,T m15,T m16);
 
             static int idx(T i, T j) { return (i + j * 4); }
 
@@ -74,9 +75,9 @@ namespace omega {
             /// Normalize the matrix.
             void normalize();
 
-            void getColumn(T col, OPoint4<T> *cptr) const;
+            void getColumn(unsigned int col, OPoint4<T> *cptr) const;
 
-            OPoint4<T> getColumn4F(T col) const {
+            OPoint4<T> getColumn4(unsigned int col) const {
                 OPoint4<T> ret;
                 getColumn(col, &ret);
                 return ret;
@@ -85,24 +86,24 @@ namespace omega {
             /// Copy the requested column into a OPoint3<T>.
             ///
             /// This drops the bottom-most row.
-            void getColumn(T col, OPoint3<T> *cptr) const;
+            void getColumn(unsigned int col, OPoint3<T> *cptr) const;
 
-            OPoint3<T> getColumn3F(T col) const {
+            OPoint3<T> getColumn3(unsigned int col) const {
                 OPoint3<T> ret;
                 getColumn(col, &ret);
                 return ret;
             }
 
             /// Set the specified column from a OPoint4<T>.
-            void setColumn(T col, const OPoint4<T> &cptr);
+            void setColumn(unsigned int col, const OPoint4<T> &cptr);
 
             /// Set the specified column from a OPoint3<T>.
             ///
             /// The bottom-most row is not set.
-            void setColumn(T col, const OPoint3<T> &cptr);
+            void setColumn(unsigned int col, const OPoint3<T> &cptr);
 
             /// Copy the specified row into a OPoint4<T>.
-            void getRow(T row, OPoint4<T> *cptr) const;
+            void getRow(unsigned int row, OPoint4<T> *cptr) const;
 
             OPoint4<T> getRow4F(T row) const {
                 OPoint4<T> ret;
@@ -112,22 +113,22 @@ namespace omega {
 
             /// Copy the specified row into a OPoint3<T>.
             ///
-            /// Right-most item is dropped.
-            void getRow(T row, OPoint3<T> *cptr) const;
+            /// right-most item is dropped.
+            void getRow(unsigned int row, OPoint3<T> *cptr) const;
 
-            OPoint3<T> getRow3F(T row) const {
+            OPoint3<T> getRow3F(unsigned int row) const {
                 OPoint3<T> ret;
                 getRow(row, &ret);
                 return ret;
             }
 
             /// Set the specified row from a OPoint4<T>.
-            void setRow(T row, const OPoint4<T> &cptr);
+            void setRow(unsigned int row, const OPoint4<T> &cptr);
 
             /// Set the specified row from a OPoint3<T>.
             ///
             /// The right-most item is not set.
-            void setRow(T row, const OPoint3<T> &cptr);
+            void setRow(unsigned int row, const OPoint3<T> &cptr);
 
             /// Get the position of the matrix.
             ///
@@ -146,19 +147,19 @@ namespace omega {
             ///
             /// This is the 1st column of the matrix and is
             /// normally considered the right vector.
-            VectorF getRightVector() const;
+            OVector getRightVector() const;
 
             /// Get the y axis of the matrix.
             ///
             /// This is the 2nd column of the matrix and is
             /// normally considered the forward vector.
-            VectorF getForwardVector() const;
+            OVector getForwardVector() const;
 
             /// Get the z axis of the matrix.
             ///
             /// This is the 3rd column of the matrix and is
             /// normally considered the up vector.
-            VectorF getUpVector() const;
+            OVector getUpVector() const;
 
             OMatrix &mul(const OMatrix &a);                    ///< M * a -> M
             OMatrix &mulL(const OMatrix &a);                   ///< a * M -> M
@@ -172,8 +173,8 @@ namespace omega {
             void mul(OPoint4<T> &p) const;                       ///< M * p -> p (full [4x4] * [1x4])
             void mulP(OPoint3<T> &p) const;                      ///< M * p -> p (assume w = 1.0f)
             void mulP(const OPoint3<T> &p, OPoint3<T> *d) const;     ///< M * p -> d (assume w = 1.0f)
-            void mulV(VectorF &p) const;                      ///< M * v -> v (assume w = 0.0f)
-            void mulV(const VectorF &p, OPoint3<T> *d) const;     ///< M * v -> d (assume w = 0.0f)
+            void mulV(OVector &p) const;                      ///< M * v -> v (assume w = 0.0f)
+            void mulV(const OVector &p, OPoint3<T> *d) const;     ///< M * v -> d (assume w = 0.0f)
 
             void mul(OBox3<T> &b) const;                           ///< Axial box -> Axial Box
 
@@ -188,9 +189,10 @@ namespace omega {
 
             // Math operator overloads
             //------------------------------------
-            friend OMatrix operator*(const OMatrix &m1, const OMatrix &m2);
-
+            OMatrix operator*(const OMatrix &m);
             OMatrix &operator*=(const OMatrix &m);
+
+            OPoint3<T> operator*(const OPoint3<T> pt);
 
             // Static identity matrix
             const static OMatrix Identity;
@@ -199,6 +201,28 @@ namespace omega {
 
 //--------------------------------------
 // Inline Functions
+
+        template<class T>
+        inline OMatrix<T>::OMatrix(T m1,T m2,T m3,T m4,T m5,T m6,T m7,T m8,T m9,T m10,T m11,T m12,T m13,T m14,T m15,T m16)
+        {
+            m[0] = m1;
+            m[1] = m2;
+            m[2] = m3;
+            m[3] = m4;
+            m[4] = m5;
+            m[5] = m6;
+            m[6] = m7;
+            m[7] = m8;
+            m[8] = m9;
+            m[9] = m10;
+            m[10] = m11;
+            m[11] = m12;
+            m[12] = m13;
+            m[13] = m14;
+            m[14] = m15;
+            m[15] = m16;
+        }
+
 
         template<class T>
         inline OMatrix<T>::OMatrix(bool _identity) {
@@ -301,7 +325,7 @@ namespace omega {
 
         template<class T>
         inline OMatrix<T> &OMatrix<T>::inverse() {
-            m_matF_inverse(m);
+            m_mat_inverse<T>(m);
             return (*this);
         }
 
@@ -404,15 +428,15 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::mulV(VectorF &v) const {
+        inline void OMatrix<T>::mulV(OVector &v) const {
             // M * v -> v
-            VectorF temp;
+            OVector temp;
             m_mat_x_vector(*this, &v.x, &temp.x);
             v = temp;
         }
 
         template<class T>
-        inline void OMatrix<T>::mulV(const VectorF &v, OPoint3<T> *d) const {
+        inline void OMatrix<T>::mulV(const OVector &v, OPoint3<T> *d) const {
             // M * v -> d
             m_mat_x_vector(*this, &v.x, &d->x);
         }
@@ -431,7 +455,7 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::getColumn(T col, OPoint4<T> *cptr) const {
+        inline void OMatrix<T>::getColumn(unsigned int col, OPoint4<T> *cptr) const {
             cptr->x = m[col];
             cptr->y = m[col + 4];
             cptr->z = m[col + 8];
@@ -439,14 +463,14 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::getColumn(T col, OPoint3<T> *cptr) const {
+        inline void OMatrix<T>::getColumn(unsigned int col, OPoint3<T> *cptr) const {
             cptr->x = m[col];
             cptr->y = m[col + 4];
             cptr->z = m[col + 8];
         }
 
         template<class T>
-        inline void OMatrix<T>::setColumn(T col, const OPoint4<T> &cptr) {
+        inline void OMatrix<T>::setColumn(unsigned int col, const OPoint4<T> &cptr) {
             m[col] = cptr.x;
             m[col + 4] = cptr.y;
             m[col + 8] = cptr.z;
@@ -454,7 +478,7 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::setColumn(T col, const OPoint3<T> &cptr) {
+        inline void OMatrix<T>::setColumn(unsigned int col, const OPoint3<T> &cptr) {
             m[col] = cptr.x;
             m[col + 4] = cptr.y;
             m[col + 8] = cptr.z;
@@ -462,7 +486,7 @@ namespace omega {
 
 
         template<class T>
-        inline void OMatrix<T>::getRow(T col, OPoint4<T> *cptr) const {
+        inline void OMatrix<T>::getRow(unsigned int col, OPoint4<T> *cptr) const {
             col *= 4;
             cptr->x = m[col++];
             cptr->y = m[col++];
@@ -471,7 +495,7 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::getRow(T col, OPoint3<T> *cptr) const {
+        inline void OMatrix<T>::getRow(unsigned int col, OPoint3<T> *cptr) const {
             col *= 4;
             cptr->x = m[col++];
             cptr->y = m[col++];
@@ -479,7 +503,7 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::setRow(T col, const OPoint4<T> &cptr) {
+        inline void OMatrix<T>::setRow(unsigned int col, const OPoint4<T> &cptr) {
             col *= 4;
             m[col++] = cptr.x;
             m[col++] = cptr.y;
@@ -488,7 +512,7 @@ namespace omega {
         }
 
         template<class T>
-        inline void OMatrix<T>::setRow(T col, const OPoint3<T> &cptr) {
+        inline void OMatrix<T>::setRow(unsigned int col, const OPoint3<T> &cptr) {
             col *= 4;
             m[col++] = cptr.x;
             m[col++] = cptr.y;
@@ -508,22 +532,22 @@ namespace omega {
         }
 
         template<class T>
-        inline VectorF OMatrix<T>::getForwardVector() const {
-            VectorF vec;
+        inline OVector OMatrix<T>::getForwardVector() const {
+            OVector vec;
             getColumn(1, &vec);
             return vec;
         }
 
         template<class T>
-        inline VectorF OMatrix<T>::getRightVector() const {
-            VectorF vec;
+        inline OVector OMatrix<T>::getRightVector() const {
+            OVector vec;
             getColumn(0, &vec);
             return vec;
         }
 
         template<class T>
-        inline VectorF OMatrix<T>::getUpVector() const {
-            VectorF vec;
+        inline OVector OMatrix<T>::getUpVector() const {
+            OVector vec;
             getColumn(2, &vec);
             return vec;
         }
@@ -532,20 +556,27 @@ namespace omega {
 // Math operator overloads
 //------------------------------------
         template<class T>
-        inline OMatrix<T> operator*(const OMatrix<T> &m1, const OMatrix<T> &m2) {
-            // temp = m1 * m2
+        inline OMatrix<T> OMatrix<T>::operator*(const OMatrix<T> &m) {
+            OMatrix<T> tempThis(*this);
             OMatrix<T> temp;
-            m_matF_x_matF(m1, m2, temp);
+            mat_x_mat<T>(tempThis, m, temp);
             return temp;
         }
 
         template<class T>
         inline OMatrix<T> &OMatrix<T>::operator*=(const OMatrix<T> &m1) {
             OMatrix<T> tempThis(*this);
-            m_matF_x_matF(tempThis, m1, *this);
+            mat_x_mat<T>(tempThis, m1, *this);
             return (*this);
         }
 
+        template<class T>
+        inline OPoint3<T> OMatrix<T>::operator*(const OPoint3<T> pt) {
+            OMatrix<T> tempThis(*this);
+            OPoint3<T> d;
+            m_mat_x_point3<T>(*this, &pt.x, &d.x);
+            return d;
+        }
 
         template<class T>
         const OMatrix<T> OMatrix<T>::Identity( true );
@@ -746,6 +777,26 @@ namespace omega {
         inline void mTransformPlane(const OMatrix<T> &mat, const OPoint3<T> &scale, const OPlane<T> &plane, OPlane<T> *result) {
             m_matF_x_scale_x_planeF(mat, &scale.x, &plane.x, &result->x);
         }
+
+        template<class T>
+        OMatrix<T> mPerspective(float fovy, float aspect, float n, float f)
+        {
+            OMatrix<T> Perspective;
+
+            float coty = 1.0f / tan(fovy * (float)M_PI / 360.0f);
+
+            Perspective.m[0] = coty / aspect;
+            Perspective.m[5] = coty;
+            Perspective.m[10] = (n + f) / (n - f);
+            Perspective.m[11] = -1.0f;
+            Perspective.m[14] = 2.0f * n * f / (n - f);
+            Perspective.m[15] = 0.0f;
+
+            return Perspective;
+        }
+
+
+        typedef OMatrix<float> OMatrixF;
 
     }
 }

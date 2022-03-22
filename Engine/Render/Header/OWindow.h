@@ -1,8 +1,10 @@
 #pragma once
 
 #include "OKeyCodes.h"
+#include "OCamera.h"
 
 struct SDL_Window;
+typedef void *SDL_GLContext;
 union SDL_Event;
 
 namespace omega {
@@ -42,23 +44,44 @@ namespace omega {
             virtual void setFullscreen(const bool fullscreen);
 
             bool isRuning();
-            static void process();
+            void process();
             virtual bool render();
             bool setSize( int width, int height );
+
+            void setCamera( std::shared_ptr<OCamera> );
+            void demo();
 
         protected:
             virtual void keyEvent(int, int, int, bool);
             virtual void mouseWheelEvent(int, int);
-            virtual void mouseMoveEvent(int, int, int);
+            virtual void mouseMoveEvent(int, float, float);
             virtual void mouseButtonEvent(int, int, int);
 
+            bool initGL();
             void quit();
+
+        private:
+            void _mouseMoveEvent(int type, int xposIn, int yposIn);
+
         private:
             SDL_Window *m_handle = nullptr;
+            SDL_GLContext m_context = nullptr;
             unsigned int m_windowId = -1;
+            bool _firstMouse = true;
+            float _lastX = 0;
+            float _lastY = 0;
+
+            std::shared_ptr<OCamera> camera;
+
+        protected:
             int m_width = 800;
             int m_height = 600;
             bool m_quit = false;
+            long long m_time = 0;
+            float m_deltaTime = 0.f;
+
+            unsigned int VBO, VAO;
+            unsigned int shaderProgram;
         };
     }
 }

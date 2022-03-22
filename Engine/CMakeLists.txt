@@ -4,6 +4,8 @@ project(oEngine)
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(SDL2 REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
 
 add_library(oEngine SHARED
         Geometry/Source/OPoint2.cpp
@@ -22,7 +24,10 @@ add_library(oEngine SHARED
         Render/Source/OWindow.cpp
         Render/Header/OWindow.h
         Render/Source/OSystem.cpp
-        Render/Header/OSystem.h Render/Header/OKeyCodes.h)
+        Render/Header/OSystem.h
+        Render/Header/OKeyCodes.h
+        Render/Source/OCamera.cpp
+        Render/Header/OCamera.h Render/Header/OShader.h)
 
 include_directories(oEngine PUBLIC
         Geometry/Header
@@ -30,4 +35,13 @@ include_directories(oEngine PUBLIC
         ${SDL2_INCLUDE_DIR}
         )
 
-target_link_libraries(oEngine ${SDL2_LIBRARY})
+set(INCLUDE_DIRS
+        ${OPENGL_INCLUDE_DIR}
+        ${GLUT_INCLUDE_DIR}
+)
+
+target_link_libraries(oEngine
+        ${SDL2_LIBRARY}
+        ${OPENGL_LIBRARIES}
+        ${GLUT_LIBRARIES}
+)

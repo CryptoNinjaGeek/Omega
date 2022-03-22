@@ -1,12 +1,9 @@
 #include <iostream>
 
-#include "OPoint2.h"
 #include "OPoint3.h"
-#include "OMatrix.h"
 #include "OWindow.h"
 #include "OSystem.h"
-
-#include <iostream>
+#include "OCamera.h"
 
 using namespace omega::geometry;
 using namespace omega::render;
@@ -16,30 +13,28 @@ class MainWindow : public OWindow
 {
 public:
     MainWindow(){
-        OPoint2<double> pt;
-        OPoint3<double> pt3;
-        OMatrix<double> m;
+        auto camera = std::shared_ptr<OCamera>(new OCamera());
 
-        pt.set(10,10);
-        pt3.set(10,10,10);
-        m.identity();
-        m.dumpMatrix("Identity");
+        camera->look(OVector (0.0f, 1.75f, 7.0f), OVector(0.0f, 1.75f, 0.0f));
+
+        setCamera( camera );
     }
 
     void keyEvent(int type, int state, int key, bool repeat)
     {
-        if(repeat || state != KEY_STATE_DOWN)
+        if( state != KEY_STATE_DOWN)
             return;
 
         switch(key)
         {
-        case KEY_Q:
-            quit();
-            break;
-        case KEY_F:
-            setFullscreen(not isFullscreen());
-            break;
+        case KEY_Q: quit(); break;
+        case KEY_F: setFullscreen(not isFullscreen()); break;
+        default: OWindow::keyEvent(type,state,key,repeat); break;
         }
+    }
+
+    bool render(){
+        return OWindow::render();
     }
 };
 

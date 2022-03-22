@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OMath.h"
+#include "OPoint4.h"
 
 namespace omega {
     namespace geometry {
@@ -169,5 +170,12 @@ namespace omega {
         inline bool mIsNaN(const OPoint4<T> &p) {
             return mIsNaN_F(p.x) || mIsNaN_F(p.y) || mIsNaN_F(p.z) || mIsNaN_F(p.w);
         }
+
+        template <class T>
+        OPoint4<T> mRotate(const OPoint4<T> &u, float angle, const OPoint3<T> &v)
+        {
+            return *(OPoint4<T>*)&(mRotate(angle, v) * u);
+        }
+
     }
 }
