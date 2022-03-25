@@ -7,6 +7,11 @@
 
 #include <iostream>
 #include <iomanip>
+#include <cmath>
+
+#include "glm/mat4x4.hpp"
+
+#define M_PI 3.14159265358979323846
 
 namespace omega {
     namespace geometry {
@@ -192,7 +197,10 @@ namespace omega {
             OMatrix operator*(const OMatrix &m);
             OMatrix &operator*=(const OMatrix &m);
 
+            void operator=(const glm::mat4x4 m);
+
             OPoint3<T> operator*(const OPoint3<T> pt);
+            OPoint4<T> operator*(const OPoint4<T> pt);
 
             // Static identity matrix
             const static OMatrix Identity;
@@ -205,22 +213,10 @@ namespace omega {
         template<class T>
         inline OMatrix<T>::OMatrix(T m1,T m2,T m3,T m4,T m5,T m6,T m7,T m8,T m9,T m10,T m11,T m12,T m13,T m14,T m15,T m16)
         {
-            m[0] = m1;
-            m[1] = m2;
-            m[2] = m3;
-            m[3] = m4;
-            m[4] = m5;
-            m[5] = m6;
-            m[6] = m7;
-            m[7] = m8;
-            m[8] = m9;
-            m[9] = m10;
-            m[10] = m11;
-            m[11] = m12;
-            m[12] = m13;
-            m[13] = m14;
-            m[14] = m15;
-            m[15] = m16;
+            setColumn(0, OPoint4<float>(m1,m2,m3,m4));
+            setColumn(1, OPoint4<float>(m5, m6, m7, m8));
+            setColumn(2, OPoint4<float>(m9, m10, m11, m12));
+            setColumn(3, OPoint4<float>(m13, m14, m15, m16));
         }
 
 
@@ -228,6 +224,8 @@ namespace omega {
         inline OMatrix<T>::OMatrix(bool _identity) {
             if (_identity)
                 identity();
+            else
+                memset(m, 0, 16 * sizeof(T));
         }
 
         template<class T>
@@ -564,6 +562,12 @@ namespace omega {
         }
 
         template<class T>
+        void OMatrix<T>::operator=(const glm::mat4x4 m1)
+        {
+            memcpy(&m[0], &m1, sizeof(glm::mat4x4));
+        }
+
+        template<class T>
         inline OMatrix<T> &OMatrix<T>::operator*=(const OMatrix<T> &m1) {
             OMatrix<T> tempThis(*this);
             mat_x_mat<T>(tempThis, m1, *this);
@@ -575,6 +579,14 @@ namespace omega {
             OMatrix<T> tempThis(*this);
             OPoint3<T> d;
             m_mat_x_point3<T>(*this, &pt.x, &d.x);
+            return d;
+        }
+
+        template<class T>
+        inline OPoint4<T> OMatrix<T>::operator*(const OPoint4<T> pt) {
+            OMatrix<T> tempThis(*this);
+            OPoint4<T> d;
+            m_mat_x_point4<T>(*this, &pt.x, &d.x);
             return d;
         }
 
@@ -741,29 +753,29 @@ namespace omega {
 #define OUT( X ) std::cout << std::fixed << std::setw(11) << std::setprecision(6) << std::setfill(' ') << X;
 
             OUT(m[idx(0,0)])
-            OUT(m[idx(0,1)])
-            OUT(m[idx(0,2)])
-            OUT(m[idx(0,3)])
-
-            std::cout << std::endl;
-
             OUT(m[idx(1,0)])
-            OUT(m[idx(1,1)])
-            OUT(m[idx(1,2)])
-            OUT(m[idx(1,3)])
-
-            std::cout << std::endl;
-
             OUT(m[idx(2,0)])
-            OUT(m[idx(2,1)])
-            OUT(m[idx(2,2)])
-            OUT(m[idx(2,3)])
+            OUT(m[idx(3,0)])
 
             std::cout << std::endl;
 
-            OUT(m[idx(3,0)])
+            OUT(m[idx(0,1)])
+            OUT(m[idx(1,1)])
+            OUT(m[idx(2,1)])
             OUT(m[idx(3,1)])
+
+            std::cout << std::endl;
+
+            OUT(m[idx(0,2)])
+            OUT(m[idx(1,2)])
+            OUT(m[idx(2,2)])
             OUT(m[idx(3,2)])
+
+            std::cout << std::endl;
+
+            OUT(m[idx(0,3)])
+            OUT(m[idx(1,3)])
+            OUT(m[idx(2,3)])
             OUT(m[idx(3,3)])
 
             std::cout << std::endl;

@@ -2,6 +2,8 @@
 
 #include "OKeyCodes.h"
 #include "OCamera.h"
+#include "OGlobal.h"
+#include "OKeyCodes.h"
 
 struct SDL_Window;
 typedef void *SDL_GLContext;
@@ -9,7 +11,7 @@ union SDL_Event;
 
 namespace omega {
     namespace render {
-        class OWindow {
+        class OMEGA_EXPORT OWindow {
         public:
             enum KeyState { KEY_STATE_UP = 0 , KEY_STATE_DOWN = 1};
             enum KeyType {
@@ -21,7 +23,7 @@ namespace omega {
             };
 
         public:
-            OWindow(int width = 800, int height = 600, int flags = 0);
+            OWindow(int width = 1024, int height = 768, int flags = 0);
 
             ~OWindow();
 
@@ -32,6 +34,9 @@ namespace omega {
             virtual bool isFocused();
             virtual bool isMinimized();
             virtual bool isMaximized();
+
+            virtual void clear();
+            virtual void swap();
 
             virtual void minimize();
             virtual void maximize();
@@ -51,18 +56,22 @@ namespace omega {
             void setCamera( std::shared_ptr<OCamera> );
             void demo();
 
+            static std::shared_ptr<OWindow> instance();
+
+            inline bool isKeyPressed(omega::system::KeyCode kc){ return keys[kc]; }
+
         protected:
             virtual void keyEvent(int, int, int, bool);
             virtual void mouseWheelEvent(int, int);
-            virtual void mouseMoveEvent(int, float, float);
+            virtual void mouseMoveEvent(int, int, int);
             virtual void mouseButtonEvent(int, int, int);
 
             bool initGL();
             void quit();
 
         private:
-            void _mouseMoveEvent(int type, int xposIn, int yposIn);
-
+            void processEvents();
+            void calculateDuration();
         private:
             SDL_Window *m_handle = nullptr;
             SDL_GLContext m_context = nullptr;
@@ -74,13 +83,16 @@ namespace omega {
             std::shared_ptr<OCamera> camera;
 
         protected:
+            bool keys[omega::system::SDL_NUM_SCANCODES];
             int m_width = 800;
             int m_height = 600;
             bool m_quit = false;
             long long m_time = 0;
             float m_deltaTime = 0.f;
 
-            unsigned int VBO, VAO;
+            unsigned int VAO;
+            unsigned int VBO;
+
             unsigned int shaderProgram;
         };
     }

@@ -58,6 +58,9 @@ namespace omega {
 
             OPoint3 <T> asPoint3F() const { return OPoint3<T>(x, y, z); }
 
+            void dump(char* title = nullptr);
+
+
             //-------------------------------------- Public static constants
         public:
             const static OPoint4 One;
@@ -129,6 +132,16 @@ namespace omega {
         inline OPoint4<T> OPoint4<T>::operator+(const OPoint4<T> &_add) const {
             return OPoint4(x + _add.x, y + _add.y, z + _add.z, w + _add.w);
         }
+
+        template <class T>
+        inline void OPoint4<T>::dump(char* title)
+        {
+            if (title)
+                std::cout << std::fixed << std::setw(11) << std::setfill(' ') << title << " => ";
+
+            std::cout << x << " , " << y << " , " << z  << " , " << w << std::endl;
+        }
+
 
         template<class T>
         inline OPoint4<T> &OPoint4<T>::operator+=(const OPoint4<T> &_add) {

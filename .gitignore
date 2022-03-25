@@ -6,3 +6,10 @@ cmake-*
 CMakeFiles
 CMakeCache*
 *.a
+*.vcxproj*
+*.sln
+*.dir
+*.vs
+x64
+Debug
+Bin64-Debug/*.*

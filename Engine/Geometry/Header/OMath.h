@@ -12,6 +12,15 @@ T mRadians(T degree)
     return (degree * (pi / 180));
 }
 
+
+template <class T>
+T mDegrees(T radians)
+{
+    T pi = 3.14159265359;
+    return (radians / (pi / 180));
+}
+
+
 template <class T>
 inline double mSqrt(const T val)
 {
@@ -100,6 +109,15 @@ inline void m_mat_x_vector(const T *m, const T *v, T *vresult)
     vresult[0] = m[0]*v[0] + m[1]*v[1] + m[2]*v[2];
     vresult[1] = m[4]*v[0] + m[5]*v[1] + m[6]*v[2];
     vresult[2] = m[8]*v[0] + m[9]*v[1] + m[10]*v[2];
+}
+
+template <class T>
+inline void m_mat_x_point4(const T* m, const T* p, T* presult)
+{
+    presult[0] = m[0] * p[0] + m[1] * p[1] + m[2] * p[2] + m[3] * p[3];
+    presult[1] = m[4] * p[0] + m[5] * p[1] + m[6] * p[2] + m[7] * p[3];
+    presult[2] = m[8] * p[0] + m[9] * p[1] + m[10] * p[2] + m[11] * p[3];
+    presult[3] = m[12] * p[0] + m[13] * p[1] + m[14] * p[2] + m[15] * p[3];
 }
 
 

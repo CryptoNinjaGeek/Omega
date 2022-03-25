@@ -1,8 +1,13 @@
 #pragma once
 
+#include<iostream>
+#include<fstream>
+#include<string>
+
 #include "OPoint3.h"
 #include "OMatrix.h"
 #include "OMath.h"
+#include "OGlobal.h"
 
 namespace omega {
     namespace geometry {
@@ -40,10 +45,13 @@ namespace omega {
             RIGHT
         };
 
-        class OCamera
+        class OMEGA_EXPORT OCamera
         {
         public:
-            OVector X, Y, Z, Position, Reference;
+            OVector Position, Reference, Up, Movement;
+            float yaw = 90.0f;
+            float pitch = 0.0f;
+            OPoint2<int> m_mousePos;
 
         public:
             OMatrix<float> ViewMatrix, ViewMatrixInverse, ProjectionMatrix, ProjectionMatrixInverse, ViewProjectionMatrix, ViewProjectionMatrixInverse;
@@ -53,16 +61,32 @@ namespace omega {
             ~OCamera();
 
         public:
-            void look(const OVector &Position, const OVector &Reference, bool RotateAroundReference = false);
-            void move(const OVector &Movement);
-            OVector onKeys(char Keys, float FrameTime);
+            void look( OVector Position,  OVector Reference, OVector Up = OVector( 0.f , 1.f , 0.f ));
+            void move( OVector Movement);
+            void move();
+            void process(float);
+            void stopMovement();
             void onMouseMove(int dx, int dy);
             void onMouseWheel(float zDelta);
             void setPerspective(float fovy, float aspect, float n, float f);
+            void setWindowSize(int width, int height);
 
         private:
             void calculateViewMatrix();
+            void processMouseMove();
+            void calculateRotations();
+
+        private:
+            int m_windowWidth = 1024;
+            int m_windowHeight = 768;
+
+            bool m_OnUpperEdge = false;
+            bool m_OnLowerEdge = false;
+            bool m_OnLeftEdge = false;
+            bool m_OnRightEdge = false;
         };
+
+        typedef std::shared_ptr<OCamera> OCameraPtr;
     }
 }
 

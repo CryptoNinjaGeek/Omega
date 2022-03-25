@@ -8,6 +8,10 @@
 #include <iostream>
 #include <iomanip>
 
+#include "glm/mat4x4.hpp"
+#include "glm/vec3.hpp"
+#include  "OQuaternion.h"
+
 namespace omega {
     namespace geometry {
         template <class T>
@@ -22,6 +26,7 @@ namespace omega {
             OPoint3(const OPoint3&);
             explicit OPoint3(T xyz);
             OPoint3(T _x, T _y, T _z);
+            OPoint3(T v[3]);
 
         public:
             void set(T xyz);
@@ -33,8 +38,12 @@ namespace omega {
             void interpolate(const OPoint3&, const OPoint3&, T);
             void zero();
 
+            OPoint3 cross(OPoint3);
+            void rotate(float, OPoint3);
+
             operator T*() { return (&x); }
             operator const T*() const { return &x; }
+            glm::vec3 toVec3();
 
             void dump(char *title = nullptr);
 
@@ -56,6 +65,8 @@ namespace omega {
             bool operator==(const OPoint3&) const;
             bool operator!=(const OPoint3&) const;
 
+            OPoint3  operator+(const glm::vec3&) const;
+
             OPoint3  operator+(const OPoint3&) const;
             OPoint3  operator-(const OPoint3&) const;
             OPoint3& operator+=(const OPoint3&);
@@ -67,6 +78,7 @@ namespace omega {
             OPoint3& operator/=(T);
 
             OPoint3 operator-() const;
+            void operator=(glm::vec3);
 
         public:
             const static OPoint3 One;
@@ -76,6 +88,12 @@ namespace omega {
 
         template <class T>
         inline OPoint3<T>::OPoint3()
+        {
+        }
+
+        template <class T>
+        inline OPoint3<T>::OPoint3(T v[3])
+            : x(v[0]), y(v[1]), z(v[2])
         {
         }
 
@@ -127,6 +145,12 @@ namespace omega {
             x = (_test.x > x) ? _test.x : x;
             y = (_test.y > y) ? _test.y : y;
             z = (_test.z > z) ? _test.z : z;
+        }
+
+        template <class T>
+        inline glm::vec3 OPoint3<T>::toVec3()
+        {
+            return glm::vec3(x,y,z);
         }
 
         template <class T>
@@ -224,6 +248,14 @@ namespace omega {
         }
 
         template <class T>
+        inline void OPoint3<T>::operator=(glm::vec3 v)
+        {
+            x = v.x;
+            y = v.y;
+            z = v.z;
+        }
+
+        template <class T>
         inline bool OPoint3<T>::operator==(const OPoint3<T>& _test) const
         {
             return (x == _test.x) && (y == _test.y) && (z == _test.z);
@@ -233,6 +265,12 @@ namespace omega {
         inline bool OPoint3<T>::operator!=(const OPoint3<T>& _test) const
         {
             return operator==(_test) == false;
+        }
+
+        template <class T>
+        inline OPoint3<T> OPoint3<T>::operator+(const glm::vec3& _add) const
+        {
+            return OPoint3(x + _add.x, y + _add.y, z + _add.z);
         }
 
         template <class T>
@@ -345,6 +383,30 @@ namespace omega {
             mCross( a, b, &r );
             return r;
         }
+
+        template <class T>
+        inline OPoint3<T> OPoint3<T>::cross(OPoint3<T> p)
+        {
+            OPoint3<T> r;
+            mCross(*this, p, &r);
+            return r;
+        }
+
+
+        template <class T>
+        inline void OPoint3<T>::rotate(float angle, OPoint3<T> v)
+        {
+            OQuaternion RotationQ(angle, v);
+
+            OQuaternion ConjugateQ = RotationQ.conjugate();
+
+            OQuaternion W = RotationQ * (*this) * ConjugateQ;
+
+            x = W.x;
+            y = W.y;
+            z = W.z;
+        }
+
 
         template <class T>
         inline  OPoint3<T> mNormalize(const OPoint3<T> &p)
