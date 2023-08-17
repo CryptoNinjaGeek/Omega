@@ -47,6 +47,9 @@ class MainWindow : public OWindow {
     texture2 = std::make_shared<Texture>();
     texture2->load(":/textures/container2_specular.png");
 
+    texture3 = std::make_shared<Texture>();
+    texture3->load(":/textures/concreteTexture.png");
+
     createLights();
     generateCubes();
     generateDome();
@@ -145,6 +148,7 @@ class MainWindow : public OWindow {
 
     for (auto pos : cubePositions) {
       float angle = 20.0f * (int)(rand() % 20);
+      float size = 0.1f * (float)(rand() % 6);
       auto mat = glm::mat4(1.0f);
       auto material = Material{.shininess = (float)(rand() % 80)};
 
@@ -155,8 +159,20 @@ class MainWindow : public OWindow {
                                                    .shader = shader,
                                                    .textures = {texture1},
                                                    .material = material,
-                                                   .lights = lights_}));
+                                                   .lights = lights_,
+                                                   .size = size}));
     }
+
+    auto mat = glm::mat4(1.0f);
+    auto material = Material{.shininess = (float)(rand() % 80)};
+
+    mat = glm::translate(mat, glm::vec3(0.f, -3.f, 0.f));
+    object_list_.push_back(ObjectGenerator::plane({.matrix = mat,
+                                                   .shader = shader,
+                                                   .textures = {texture3},
+                                                   .material = material,
+                                                   .lights = lights_,
+                                                   .size = 5.f}));
   }
 
   void keyEvent(int type, int state, int key, bool repeat) {
@@ -186,6 +202,7 @@ class MainWindow : public OWindow {
   std::shared_ptr<Camera> camera;
   std::shared_ptr<Texture> texture1;
   std::shared_ptr<Texture> texture2;
+  std::shared_ptr<Texture> texture3;
   std::vector<std::shared_ptr<Object>> object_list_;
   std::vector<std::shared_ptr<Light>> lights_;
 };

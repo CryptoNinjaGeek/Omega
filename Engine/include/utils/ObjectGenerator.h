@@ -25,6 +25,7 @@ struct ObjectGenerator {
   std::vector<std::shared_ptr<omega::render::Texture>> textures;
   std::optional<omega::render::Material> material;
   std::optional<std::vector<std::shared_ptr<interface::Light>>> lights;
+  float size{0.5f};
 };
 }  // namespace input
 class OMEGA_EXPORT ObjectGenerator {
@@ -32,7 +33,10 @@ class OMEGA_EXPORT ObjectGenerator {
   static auto box(input::ObjectGenerator)
       -> std::shared_ptr<omega::geometry::Object>;
 
-  static auto dome(omega::input::CubeTextureInput)
+  static auto plane(input::ObjectGenerator)
+      -> std::shared_ptr<omega::geometry::Object>;
+
+  static auto dome(omega::input::CubeTextureInput, float size = 10.f)
       -> std::shared_ptr<omega::geometry::Object>;
 };
 }  // namespace utils
