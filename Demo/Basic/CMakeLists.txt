@@ -19,9 +19,7 @@ set_target_properties(Basic PROPERTIES
 
 include_directories(Basic PUBLIC
         ${OmegaEngine_SOURCE_DIR}/3rdParty/include
-        ../../Engine/System/Header
-        ../../Engine/Geometry/Header
-        ../../Engine/Render/Header
+        ../../Engine/include
 )
 target_link_libraries(Basic oEngine)
 target_compile_definitions(Basic PRIVATE IMPORT_ENGINE_LIB)

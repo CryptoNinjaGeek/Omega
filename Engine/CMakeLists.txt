@@ -1,48 +1,62 @@
 cmake_minimum_required(VERSION 3.21)
 project(oEngine)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 
-find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 add_library(oEngine SHARED
-        System/Header/OGlobal.h
-        Geometry/Source/OQuaternion.cpp
-        Geometry/Header/OQuaternion.h      
-        Geometry/Source/OPoint2.cpp
-        Geometry/Source/OPoint3.cpp
-        Geometry/Source/OPlane.cpp
-        Geometry/Source/OMatrix.cpp
-        Geometry/Header/OPoint2.h
-        Geometry/Header/OPoint3.h
-        Geometry/Header/OMath.h
-        Geometry/Header/OPlane.h
-        Geometry/Header/OMatrix.h
-        Geometry/Header/OPoint4.h
-        Geometry/Header/OBox.h
-        Geometry/Header/OSphere.h
-        Geometry/Header/OBoxBase.h
-        Render/Source/OWindow.cpp
-        Render/Header/OWindow.h
-        System/Source/OSystem.cpp
-        System/Header/OSystem.h
-        Render/Header/OKeyCodes.h
-        Render/Source/OCamera.cpp
-        Render/Header/OCamera.h 
-        Render/Header/OShader.h
-        Render/Source/OShader.cpp
+        src/geometry/Quaternion.cpp
+        src/geometry/Point2.cpp
+        src/geometry/Point3.cpp
+        src/geometry/Plane.cpp
+        src/geometry/Matrix.cpp
+        src/render/Window.cpp
+        src/system/System.cpp
+        src/render/Shader.cpp
+        src/render/Texture.cpp
+        src/other/glad.c
+
+        include/system/Global.h
+        include/geometry/Quaternion.h
+        include/geometry/Point2.h
+        include/geometry/Point3.h
+        include/geometry/Math.h
+        include/geometry/Plane.h
+        include/geometry/Matrix.h
+        include/geometry/Point4.h
+        include/geometry/Box.h
+        include/geometry/Sphere.h
+        include/geometry/BoxBase.h
+        include/render/Window.h
+        include/system/System.h
+        include/render/KeyCodes.h
+        include/render/Camera.h
+        include/render/Shader.h
+        include/render/Texture.h
+        include/geometry/Object.h
+        src/geometry/Object.cpp
+        include/utils/ObjectGenerator.h
+        src/utils/ObjectGenerator.cpp
+        include/render/Material.h
+        include/interface/Entity.h
+        include/interface/Light.h
+        include/render/DirectionalLight.h
+        include/render/SpotLight.h
+        include/render/PointLight.h
+        src/render/PointLight.cpp
+        src/render/DirectionalLight.cpp
+        src/render/SpotLight.cpp
+        include/system/FileSystem.h
+        src/system/FileSystem.cpp
+        include/system/ByteArray.h
+        include/render/CubeTexture.h
+        src/render/CubeTexture.cpp
+        src/geometry/SkyBox.cpp
+        include/geometry/SkyBox.h
 )
 
-include_directories(oEngine PUBLIC
-        ../3rdParty/include  
-        System/Header
-        Geometry/Header
-        Render/Header
-        ${SDL2_INCLUDE_DIR}
-        )
-
-link_directories(oEngine ../3rdParty/lib/x64)
+include_directories(oEngine PUBLIC include)
 
 set(INCLUDE_DIRS
         ${OPENGL_INCLUDE_DIR}
@@ -50,11 +64,11 @@ set(INCLUDE_DIRS
 )
 
 target_link_libraries(oEngine
-        ${SDL2_LIBRARY}
         ${OPENGL_LIBRARIES}
         ${GLUT_LIBRARIES}
-        ${OmegaEngine_SOURCE_DIR}/3rdParty/lib/x64/glew32.lib
-        ${OmegaEngine_SOURCE_DIR}/3rdParty/lib/x64/glm_static.lib
+        glm::glm
+        glfw
+        zip
 )
 
-target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB)
+target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB GL_SILENCE_DEPRECATION)
