@@ -16,3 +16,16 @@ void DirectionalLight::setup(std::shared_ptr<render::Shader> shader) {
   shader->setVec3("dirLight[" + no + "].specular", specular_);
   shader->setInt("dirLight[" + no + "].on", 1);
 }
+
+void DirectionalLight::dump() {
+  std::cout << "----------------------" << std::endl;
+  std::cout << "dirLight.direction = " << direction_.x << "," << direction_.y
+            << "," << direction_.z << std::endl;
+  std::cout << "dirLight.ambient" << ambient_.x << "," << ambient_.y << ","
+            << ambient_.z << std::endl;
+  std::cout << "dirLight.diffuse = " << diffuse_.x << "," << diffuse_.y << ","
+            << diffuse_.z << std::endl;
+  std::cout << "dirLight.specular = " << specular_.x << "," << specular_.y
+            << "," << specular_.z << std::endl;
+  std::cout << "dirLight.on = " << 1 << std::endl;
+}

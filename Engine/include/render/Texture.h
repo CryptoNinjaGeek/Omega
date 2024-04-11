@@ -7,23 +7,28 @@
 namespace omega {
 namespace render {
 struct ImageInfo {
-  unsigned char* data;
+  unsigned char *data;
   int width;
   int height;
   int channels;
 };
 
 class OMEGA_EXPORT Texture {
- public:
+public:
   Texture();
-  bool load(std::string fileName);
-  virtual bool activate(int no);
 
- protected:
-  auto loadImageData(std::string fileName, bool flip = true) -> ImageInfo;
+  virtual auto activate(int no) -> bool;
 
- protected:
+  auto load(std::string fileName, std::string name = {}) -> bool;
+  auto name() -> std::string { return _name; }
+  auto name(std::string name) -> void { _name = name; }
+
+protected:
+  auto loadImageData(std::string fileName, bool flip = true, std::string name = {}) -> ImageInfo;
+
+protected:
   unsigned int m_textureId{0};
+  std::string _name;
 };
 };  // namespace render
 };  // namespace omega

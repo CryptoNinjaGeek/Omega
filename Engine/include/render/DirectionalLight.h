@@ -27,6 +27,7 @@ class OMEGA_EXPORT DirectionalLight : public interface::Light {
   interface::LightType type() { return interface::LightType::DIRECTIONAL; }
 
   void setup(std::shared_ptr<render::Shader>);
+  void dump();
 
  private:
   glm::vec3 direction_;

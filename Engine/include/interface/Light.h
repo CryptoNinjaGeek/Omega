@@ -11,7 +11,8 @@
 namespace omega {
 namespace render {
 class Shader;
-}
+class Camera;
+}  // namespace render
 namespace interface {
 
 enum class LightType { POINT, DIRECTIONAL, SPOT };
@@ -20,6 +21,9 @@ class OMEGA_EXPORT Light : public Entity {
  public:
   Light() = default;
 
+  virtual void render(std::shared_ptr<render::Camera>,
+                      std::shared_ptr<render::Shader>){};
+  virtual void dump() = 0;
   virtual LightType type() = 0;
   virtual void setup(std::shared_ptr<render::Shader>) = 0;
 };

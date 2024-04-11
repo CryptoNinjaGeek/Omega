@@ -29,3 +29,16 @@ void SpotLight::setup(std::shared_ptr<render::Shader> shader) {
   shader->setFloat("spotLight[" + no + "].outerCutOff", outerCutOff_);
   shader->setInt("spotLight[" + no + "].on", 1);
 }
+
+void SpotLight::dump() {
+  std::cout << "----------------------" << std::endl;
+  std::cout << "spotLight.direction = " << direction_.x << "," << direction_.y
+            << "," << direction_.z << std::endl;
+  std::cout << "spotLight.ambient = " << ambient_.x << "," << ambient_.y << ","
+            << ambient_.z << std::endl;
+  std::cout << "spotLight.diffuse = " << diffuse_.x << "," << diffuse_.y << ","
+            << diffuse_.z << std::endl;
+  std::cout << "spotLight.specular = " << specular_.x << "," << specular_.y
+            << "," << specular_.z << std::endl;
+  std::cout << "spotLight.on = " << 1 << std::endl;
+}

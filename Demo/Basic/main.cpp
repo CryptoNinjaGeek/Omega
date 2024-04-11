@@ -1,15 +1,15 @@
 #include <iostream>
-#include <iso646.h>
 
 #include <geometry/Point3.h>
 #include <render/Window.h>
 #include <system/System.h>
-#include <render/Camera.h>
+#include <render/CameraFPS.h>
 #include <render/Shader.h>
 #include <render/Material.h>
 #include <render/Texture.h>
 #include <geometry/Object.h>
 #include <system/FileSystem.h>
+#include <geometry/Scene.h>
 
 #include <render/DirectionalLight.h>
 #include <render/PointLight.h>
@@ -25,186 +25,279 @@ using namespace omega::interface;
 using namespace omega::input;
 using namespace omega;
 
-class MainWindow : public OWindow {
- public:
-  MainWindow() : OWindow() {
-    fs::instance()->add(
-        "/Users/cta/Development/personal/Omega/Demo/resources.zip");
+class MainWindow : public Window {
+public:
+  MainWindow() : Window() {
 
-    camera = std::make_shared<Camera>(glm::vec3(1.0f, 0.0f, 3.0f),
-                                      glm::vec3(0.0f, 1.0f, 0.0f), -110.f);
-    shader = Shader::fromFile(4, 2, ":/shaders/core.vs", ":/shaders/core.fs");
-    shader->setInt("texture1", 0);
-    shader->setVec3("ambient", 0.05f, 0.05f, 0.05f);
+	fs::instance()->add(
+		"/Users/cta/Development/personal/Omega/Demo/resources.zip");
 
-    skyShader =
-        Shader::fromFile(4, 2, ":/shaders/skybox.vs", ":/shaders/skybox.fs");
-    skyShader->setInt("skybox", 0);
+	auto camera = std::make_shared<CameraFPS>(glm::vec3(0.0f, 1.0f, 0.0f),
+											  glm::vec3(0.0f, 2.0f, 0.0f), -110.f);
+	shader = Shader::fromFile(4,
+							  2,
+							  ":/shaders/core.vs",
+							  "/Users/cta/Development/personal/Omega/Demo/Resources/shaders/core.fs");
+	shader->setInt("texture1", 0);
+	shader->setVec4("ambient", 0.15f, 0.15f, 0.15f, 1.0f);
 
-    texture1 = std::make_shared<Texture>();
-    texture1->load(":/textures/container2.jpg");
+	plainShader =
+		Shader::fromFile(4, 2, ":/shaders/plain.vs", ":/shaders/plain.fs");
+	plainShader->setInt("texture1", 0);
 
-    texture2 = std::make_shared<Texture>();
-    texture2->load(":/textures/container2_specular.png");
+	skyShader =
+		Shader::fromFile(4, 2, ":/shaders/skybox.vs", ":/shaders/skybox.fs");
+	skyShader->setInt("skybox", 0);
 
-    texture3 = std::make_shared<Texture>();
-    texture3->load(":/textures/concreteTexture.png");
+	texture1 = std::make_shared<Texture>();
+	texture1->load(":/textures/Cargo_container_v1.tga");
 
-    createLights();
-    generateCubes();
-    generateDome();
+	texture2 = std::make_shared<Texture>();
+	texture2->load(":/textures/container2_specular.png");
 
-    setCamera(camera);
+	texture3 = std::make_shared<Texture>();
+	texture3->load(":/textures/pbr/grass/albedo.png");
+
+	texture4 = std::make_shared<Texture>();
+	texture4->load(":/textures/container2.png");
+
+/*
+	_scene = std::make_shared<Scene>("/Users/cta/Development/personal/Omega/Demo/Resources/models/big_map.fbx");
+	_scene->shaders(shader, plainShader);
+	_scene->lights(lights_);
+	_scene->scale(0.2f);
+*/
+	_scene = std::make_shared<Scene>(false);
+	_scene->shaders(shader, plainShader);
+	_scene->debug(false);
+
+	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx");
+
+	auto idx = _scene->add(camera);
+
+	createLights();
+/*	generateCubes();
+	generateContainer();*/
+	generateGround();
+	generateDome();
+
+	_scene->prepare();
+	_scene->setCurrentCamera(idx);
+
+	setCamera(camera);
   }
 
   void generateDome() {
-    auto skyBox =
-        ObjectGenerator::dome({.front = ":/textures/skybox/front.jpg",
-                               .back = ":/textures/skybox/back.jpg",
-                               .left = ":/textures/skybox/left.jpg",
-                               .right = ":/textures/skybox/right.jpg",
-                               .top = ":/textures/skybox/top.jpg",
-                               .bottom = ":/textures/skybox/bottom.jpg"});
-    skyBox->setShader(skyShader);
-    object_list_.push_back(skyBox);
+	auto skyBox =
+		ObjectGenerator::dome({.front = ":/textures/skybox/front.jpg",
+								  .back = ":/textures/skybox/back.jpg",
+								  .left = ":/textures/skybox/left.jpg",
+								  .right = ":/textures/skybox/right.jpg",
+								  .top = ":/textures/skybox/top.jpg",
+								  .bottom = ":/textures/skybox/bottom.jpg"});
+	skyBox->setShader(skyShader);
+	_scene->add(skyBox);
   }
 
   void createLights() {
-    auto dir_light = std::make_shared<DirectionalLight>(DirectionalLightInput{
-        .direction = glm::vec3(-0.2f, -1.0f, -0.3f),
-        .ambient = glm::vec3(0.05f, 0.05f, 0.05f),
-        .diffuse = glm::vec3(0.4f, 0.4f, 0.4f),
-        .specular = glm::vec3(0.5f, 0.5f, 0.5f),
-    });
+	auto dir_light = std::make_shared<DirectionalLight>(DirectionalLightInput{
+		.direction = glm::vec3(-0.2f, 1.0f, -0.3f),
+		.ambient = glm::vec3(0.05f, 0.05f, 0.05f),
+		.diffuse = glm::vec3(0.4f, 0.4f, 0.4f),
+		.specular = glm::vec3(0.5f, 0.5f, 0.5f),
+	});
 
-    auto point_light1 = std::make_shared<PointLight>(PointLightInput{
-        .position = glm::vec3(0.7f, 0.2f, 2.0f),
-        .ambient = glm::vec3(0.05f, 0.05f, 0.05f),
-        .diffuse = glm::vec3(0.3f, 0.8f, 0.8f),
-        .specular = glm::vec3(0.5f, 1.0f, 1.0f),
-        .constant = 1.0f,
-        .linear = 0.09f,
-        .quadratic = 0.032f,
-    });
+	auto point_light1 = std::make_shared<PointLight>(PointLightInput{
+		.position = glm::vec3(0.7f, 1.0f, 2.0f),
+		.ambient = glm::vec3(0.05f, 0.05f, 0.05f),
+		.diffuse = glm::vec3(0.3f, 0.8f, 0.8f),
+		.specular = glm::vec3(0.5f, 1.0f, 1.0f),
+		.constant = 1.0f,
+		.linear = 0.09f,
+		.quadratic = 0.032f,
+	});
 
-    auto point_light2 = std::make_shared<PointLight>(PointLightInput{
-        .position = glm::vec3(2.3f, -3.3f, -4.0f),
-        .ambient = glm::vec3(0.05f, 0.05f, 0.05f),
-        .diffuse = glm::vec3(0.8f, 0.2f, 0.2f),
-        .specular = glm::vec3(1.0f, 0.6f, 0.6f),
-        .constant = 1.0f,
-        .linear = 0.09f,
-        .quadratic = 0.032f,
-    });
+	auto point_light2 = std::make_shared<PointLight>(PointLightInput{
+		.position = glm::vec3(2.3f, 3.3f, -4.0f),
+		.ambient = glm::vec3(0.05f, 0.05f, 0.05f),
+		.diffuse = glm::vec3(0.8f, 0.2f, 0.2f),
+		.specular = glm::vec3(1.0f, 0.6f, 0.6f),
+		.constant = 1.0f,
+		.linear = 0.09f,
+		.quadratic = 0.032f,
+	});
 
-    auto point_light3 = std::make_shared<PointLight>(PointLightInput{
-        .position = glm::vec3(-4.0f, 2.0f, -12.0f),
-        .ambient = glm::vec3(0.05f, 0.05f, 0.05f),
-        .diffuse = glm::vec3(0.3f, 0.8f, 0.4f),
-        .specular = glm::vec3(0.3f, 1.0f, 0.3f),
-        .constant = 1.0f,
-        .linear = 0.09f,
-        .quadratic = 0.032f,
-    });
+	auto point_light3 = std::make_shared<PointLight>(PointLightInput{
+		.position = glm::vec3(-4.0f, 2.0f, -12.0f),
+		.ambient = glm::vec3(0.05f, 0.05f, 0.05f),
+		.diffuse = glm::vec3(0.3f, 0.8f, 0.4f),
+		.specular = glm::vec3(0.3f, 1.0f, 0.3f),
+		.constant = 1.0f,
+		.linear = 0.09f,
+		.quadratic = 0.032f,
+	});
 
-    auto point_light4 = std::make_shared<PointLight>(PointLightInput{
-        .position = glm::vec3(0.0f, 0.0f, -3.0f),
-        .ambient = glm::vec3(0.05f, 0.05f, 0.05f),
-        .diffuse = glm::vec3(0.8f, 0.8f, 0.8f),
-        .specular = glm::vec3(1.0f, 1.0f, 1.0f),
-        .constant = 1.0f,
-        .linear = 0.09f,
-        .quadratic = 0.032f,
-    });
+	auto point_light4 = std::make_shared<PointLight>(PointLightInput{
+		.position = glm::vec3(0.0f, 7.0f, -3.0f),
+		.ambient = glm::vec3(0.05f, 0.05f, 0.05f),
+		.diffuse = glm::vec3(0.8f, 0.8f, 0.8f),
+		.specular = glm::vec3(1.0f, 1.0f, 1.0f),
+		.constant = 1.0f,
+		.linear = 0.09f,
+		.quadratic = 0.032f,
+	});
 
-    auto spot_light = std::make_shared<SpotLight>(
-        SpotLightInput{.tracking = camera,
-                       .ambient = glm::vec3(0.0f, 0.0f, 0.0f),
-                       .diffuse = glm::vec3(1.0f, 1.0f, 1.0f),
-                       .specular = glm::vec3(1.0f, 1.0f, 1.0f),
-                       .constant = 1.0f,
-                       .linear = 0.09f,
-                       .quadratic = 0.032f,
-                       .cutOff = glm::cos(glm::radians(12.5f)),
-                       .outerCutOff = glm::cos(glm::radians(15.0f))});
+	auto spot_light = std::make_shared<SpotLight>(
+		SpotLightInput{.tracking = _scene->currentCamera(),
+			.ambient = glm::vec3(0.0f, 0.0f, 0.0f),
+			.diffuse = glm::vec3(1.0f, 1.0f, 1.0f),
+			.specular = glm::vec3(1.0f, 1.0f, 1.0f),
+			.constant = 1.0f,
+			.linear = 0.09f,
+			.quadratic = 0.032f,
+			.cutOff = glm::cos(glm::radians(12.5f)),
+			.outerCutOff = glm::cos(glm::radians(15.0f))});
 
-    lights_.push_back(dir_light);
-
-    lights_.push_back(point_light1);
-    lights_.push_back(point_light2);
-    lights_.push_back(point_light3);
-    lights_.push_back(point_light4);
-
-    lights_.push_back(spot_light);
+	//_scene->add(dir_light);
+	_scene->add(point_light1);
+	_scene->add(point_light2);
+	_scene->add(point_light3);
+	_scene->add(point_light4);
+	_scene->add(spot_light);
   }
 
   void generateCubes() {
-    glm::vec3 cubePositions[] = {
-        glm::vec3(0.0f, 0.0f, 0.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
-        glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
-        glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
+	glm::vec3 cubePositions[] = {
+		glm::vec3(14.0f, 1.0f, 0.0f), glm::vec3(12.0f, 1.0f, -15.0f),
+		glm::vec3(-3.0f, 1.0f, -5.0f), glm::vec3(-13.8f, 1.0f, -12.3f),
+		glm::vec3(9.4f, 1.f, -7.0f), glm::vec3(-10.7f, 1.0f, -7.5f),
+		glm::vec3(4.3f, 1.0f, -5.0f), glm::vec3(8.5f, 1.0f, -12.5f),
+		glm::vec3(7.5f, 1.0f, -4.0f), glm::vec3(-9.3f, 1.0f, -10.5f)};
 
-    for (auto pos : cubePositions) {
-      float angle = 20.0f * (int)(rand() % 20);
-      float size = 0.1f * (float)(rand() % 6);
-      auto mat = glm::mat4(1.0f);
-      auto material = Material{.shininess = (float)(rand() % 80)};
+	int nr = 0;
+	for (auto pos : cubePositions) {
+//	  float angle = 20.0f*(int)(rand()%20);
+	  float size = 0.1f*((float)(rand()%6) + 0.1f);
+	  auto mat = glm::mat4(1.0f);
+	  auto material = Material{.shininess = (float)(rand()%80)};
 
-      mat = glm::translate(mat, pos);
-      mat = glm::rotate(mat, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+	  mat = glm::translate(mat, pos);
+//	  mat = glm::rotate(mat, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 
-      object_list_.push_back(ObjectGenerator::box({.matrix = mat,
-                                                   .shader = shader,
-                                                   .textures = {texture1},
-                                                   .material = material,
-                                                   .lights = lights_,
-                                                   .size = size}));
-    }
+	  _scene->add(ObjectGenerator::box({.matrix = mat,
+										   .shader = shader,
+										   .textures = {texture4},
+										   .material = material,
+										   .size = size,
+										   .name = "Cube" + std::to_string(nr++)}));
+	}
 
-    auto mat = glm::mat4(1.0f);
-    auto material = Material{.shininess = (float)(rand() % 80)};
-
-    mat = glm::translate(mat, glm::vec3(0.f, -3.f, 0.f));
-    object_list_.push_back(ObjectGenerator::plane({.matrix = mat,
-                                                   .shader = shader,
-                                                   .textures = {texture3},
-                                                   .material = material,
-                                                   .lights = lights_,
-                                                   .size = 5.f}));
   }
 
-  void keyEvent(int type, int state, int key, bool repeat) {
-    switch (key) {
-      case KEY_ESCAPE:
-        if (state == KEY_STATE_DOWN) quit();
-        break;
-      case KEY_F:
-        if (state == KEY_STATE_DOWN) setFullscreen(not isFullscreen());
-        break;
-      default:
-        OWindow::keyEvent(type, state, key, repeat);
-        break;
-    }
+  void generateGround() {
+	auto mat = glm::mat4(1.0f);
+	auto material = Material{.shininess = (float)(rand()%80)};
+
+	mat = glm::translate(mat, glm::vec3(0.f, 0.f, 0.f));
+	_scene->add(ObjectGenerator::plane({.matrix = mat,
+										   .shader = shader,
+										   .textures = {texture3},
+										   .material = material,
+										   .size = 25.f,
+										   .name = "Ground"}));
+  }
+
+  void generateContainer() {
+
+	_scene->add(ObjectGenerator::container({
+											   .position = glm::vec3(2.0f, 0.5f, 5.0f),
+											   .shader = shader,
+											   .textures = {texture1},
+											   .material = Material{.shininess = (float)(rand()%80)},
+											   .size = 0.5f,
+											   .mass = 10000.f,
+										   }));
+
+	_scene->add(ObjectGenerator::container({
+											   .position = glm::vec3(-1.0f, 0.5f, 5.0f),
+											   .shader = shader,
+											   .textures = {texture1},
+											   .material = Material{.shininess = (float)(rand()%80)},
+											   .size = 0.5f,
+											   .mass = 10000.f,
+										   }));
+
+	_scene->add(ObjectGenerator::container({
+											   .position = glm::vec3(1.0f, 1.5f, 5.0f),
+											   .shader = shader,
+											   .textures = {texture1},
+											   .material = Material{.shininess = (float)(rand()%80)},
+											   .size = 0.5f,
+											   .mass = 10000.f,
+										   }));
+
+  }
+
+  void keyEvent(int state, int key, int modifier, bool repeat) {
+	switch (key) {
+	case KEY_ESCAPE:
+	  if (state==KEY_STATE_DOWN)
+		quit();
+	  break;
+	case KEY_1:
+	  if (state==KEY_STATE_DOWN)
+		setSize(640, 480);
+	  break;
+	case KEY_2:
+	  if (state==KEY_STATE_DOWN)
+		setSize(1024, 768);
+	  break;
+	case KEY_F:
+	  if (state==KEY_STATE_DOWN)
+		setFullscreen(not isFullscreen());
+	  break;
+	case KEY_J:
+	  if (state==KEY_STATE_DOWN) {
+		auto object = _scene->object("Warehouse1.door1");
+		if (object)
+		  object->visible(!object->visible());
+
+	  }
+	  break;
+	case KEY_K:
+	  if (state==KEY_STATE_DOWN) {
+		auto object = _scene->object("Warehouse1.door2");
+		if (object)
+		  object->visible(!object->visible());
+
+	  }
+	  break;
+	default:Window::keyEvent(state, key, modifier, repeat);
+	  break;
+	}
+  }
+
+  void process() {
+	_scene->process(m_deltaTime);
+	Window::process();
   }
 
   bool render() {
-    for (auto object : object_list_) {
-      object->render(camera);
-    }
-    return OWindow::render();
+	_scene->render();
+	return Window::render();
   }
 
- private:
+private:
+  std::shared_ptr<Scene> _scene;
+
   std::shared_ptr<Shader> skyShader;
   std::shared_ptr<Shader> shader;
-  std::shared_ptr<Camera> camera;
+  std::shared_ptr<Shader> plainShader;
+
   std::shared_ptr<Texture> texture1;
   std::shared_ptr<Texture> texture2;
   std::shared_ptr<Texture> texture3;
-  std::vector<std::shared_ptr<Object>> object_list_;
-  std::vector<std::shared_ptr<Light>> lights_;
+  std::shared_ptr<Texture> texture4;
 };
 
 int main() {
@@ -213,10 +306,10 @@ int main() {
   auto window = new MainWindow();
 
   while (window->isRuning()) {
-    window->process();
-    window->clear();
-    window->render();
-    window->swap();
+	window->process();
+	window->clear();
+	window->render();
+	window->swap();
   }
 
   return 0;

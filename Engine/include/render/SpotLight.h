@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <optional>
 
 #include <system/Global.h>
 #include <interface/Light.h>
@@ -41,6 +42,7 @@ class OMEGA_EXPORT SpotLight : public interface::Light {
   interface::LightType type() { return interface::LightType::SPOT; }
 
   void setup(std::shared_ptr<render::Shader>);
+  void dump();
 
  private:
   std::optional<std::shared_ptr<interface::Entity>> tracking_;

@@ -5,6 +5,15 @@ include("FetchContent")
 
 message(STATUS "${Green} FreeGlut Should Be Downloaded ${ColourReset}")
 
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+set(CMAKE_POLICY_DEFAULT_CMP0063 "NEW")
+
+FetchContent_Declare(
+        reactphysics3d
+        GIT_REPOSITORY https://github.com/DanielChappuis/reactphysics3d.git
+        GIT_TAG v0.10.0
+)
+
 FetchContent_Declare(
         libzip
         GIT_REPOSITORY https://github.com/nih-at/libzip.git
@@ -74,6 +83,7 @@ if (NOT stb_image_POPULATED)
     FetchContent_Populate(stb_image)
 endif ()
 
+FetchContent_MakeAvailable(reactphysics3d)
 FetchContent_MakeAvailable(libzip)
 FetchContent_MakeAvailable(audeo)
 FetchContent_MakeAvailable(assimp)

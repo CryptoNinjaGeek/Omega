@@ -19,3 +19,25 @@ void PointLight::setup(std::shared_ptr<render::Shader> shader) {
   shader->setFloat("pointLights[" + no + "].quadratic", quadratic_);
   shader->setInt("pointLights[" + no + "].on", 1);
 }
+
+void PointLight::dump() {
+  std::cout << "----------------------" << std::endl;
+  std::cout << "pointLights.position = " << position_.x << "," << position_.y
+            << "," << position_.z << std::endl;
+  std::cout << "pointLights.ambient = " << ambient_.x << "," << ambient_.y
+            << "," << ambient_.z << std::endl;
+  std::cout << "pointLights.diffuse = " << diffuse_.x << "," << diffuse_.y
+            << "," << diffuse_.z << std::endl;
+  std::cout << "pointLights.specular = " << specular_.x << "," << specular_.y
+            << "," << specular_.z << std::endl;
+  std::cout << "pointLights.constant = " << constant_ << std::endl;
+  std::cout << "pointLights.linear = " << linear_ << std::endl;
+  std::cout << "pointLights.quadratic = " << quadratic_ << std::endl;
+
+  std::cout << "pointLights.on = " << 1 << std::endl;
+}
+
+void PointLight::render(std::shared_ptr<Camera>,
+                        std::shared_ptr<render::Shader> shader) {
+  shader->use();
+}

@@ -12,13 +12,12 @@ struct PointLightInput {
   glm::vec3 ambient;
   glm::vec3 diffuse;
   glm::vec3 specular;
-  float constant;
-  float linear;
-  float quadratic;
+  float constant{1.0f};
+  float linear{0.9f};
+  float quadratic{0.032f};
 };
 }  // namespace input
 namespace render {
-
 class OMEGA_EXPORT PointLight : public interface::Light {
  public:
   PointLight(input::PointLightInput input)
@@ -32,6 +31,8 @@ class OMEGA_EXPORT PointLight : public interface::Light {
 
   interface::LightType type() { return interface::LightType::POINT; }
   void setup(std::shared_ptr<render::Shader>);
+  void dump();
+  void render(std::shared_ptr<render::Camera>, std::shared_ptr<render::Shader>);
 
  private:
   glm::vec3 position_;

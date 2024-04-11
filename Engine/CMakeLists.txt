@@ -31,13 +31,16 @@ add_library(oEngine SHARED
         include/render/Window.h
         include/system/System.h
         include/render/KeyCodes.h
+
         include/render/Camera.h
+        include/render/CameraFly.h
+        include/render/CameraFPS.h
+
         include/render/Shader.h
         include/render/Texture.h
         include/geometry/Object.h
         src/geometry/Object.cpp
         include/utils/ObjectGenerator.h
-        src/utils/ObjectGenerator.cpp
         include/render/Material.h
         include/interface/Entity.h
         include/interface/Light.h
@@ -54,6 +57,33 @@ add_library(oEngine SHARED
         src/render/CubeTexture.cpp
         src/geometry/SkyBox.cpp
         include/geometry/SkyBox.h
+        include/geometry/Scene.h
+        include/geometry/Vertex.h
+
+        src/utils/ObjectGenerator.cpp
+        src/utils/Objects/Box.cpp
+        src/utils/Objects/Dome.cpp
+        src/utils/Objects/Mesh.cpp
+        src/utils/Objects/Plane.cpp
+        src/utils/Objects/Container.cpp
+        src/geometry/Scene.cpp
+        include/system/PhysicsObject.h
+
+        src/render/Camera.cpp
+        src/render/CameraFly.cpp
+        src/render/CameraFPS.cpp
+
+        src/geometry/ComplexObject.cpp
+        include/geometry/ComplexObject.h
+
+        src/system/TextureManager.cpp
+        include/system/TextureManager.h
+
+        src/utils/Loader.cpp
+        include/utils/Loader.h
+
+        include/geometry/ObjectTree.h
+        src/geometry/ObjectTree.cpp
 )
 
 include_directories(oEngine PUBLIC include)
@@ -69,6 +99,8 @@ target_link_libraries(oEngine
         glm::glm
         glfw
         zip
+        assimp
+        reactphysics3d
 )
 
 target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB GL_SILENCE_DEPRECATION)

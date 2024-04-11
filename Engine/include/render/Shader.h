@@ -19,7 +19,7 @@ namespace render {
 using namespace omega::geometry;
 
 class OMEGA_EXPORT Shader {
- private:
+private:
   unsigned int id;
   const int versionMajor;
   const int versionMinor;
@@ -29,18 +29,18 @@ class OMEGA_EXPORT Shader {
   unsigned int loadShaderFromFile(unsigned int type, std::string fileName);
   unsigned int loadShaderFromString(unsigned int type, std::string fileName);
   bool loadShadersFromString(std::string vertexCode, std::string fragmentCode,
-                             std::string geometryCode = {});
+							 std::string geometryCode = {});
   bool loadShadersFromFile(std::string vertexFile, std::string fragmentFile,
-                           std::string geometryFile = {});
+						   std::string geometryFile = {});
 
   void linkProgram(unsigned int vertexShader, unsigned int geometryShader,
-                   unsigned int fragmentShader);
+				   unsigned int fragmentShader);
 
- public:
+public:
   Shader(const int versionMajor, const int versionMinor);
 
   Shader(const int versionMajor, const int versionMinor, std::string vertexFile,
-         std::string fragmentFile, std::string geometryFile = {});
+		 std::string fragmentFile, std::string geometryFile = {});
 
   ~Shader();
 
@@ -54,30 +54,31 @@ class OMEGA_EXPORT Shader {
   void setVec4(std::string name, glm::vec4 value);
   void setMat4fv(std::string name, glm::mat4 value, bool transpose = false);
 
+  void setVec4(std::string name, float x, float y, float z, float w);
   void setVec3(std::string name, float x, float y, float z);
 
   void resetCounters() {
-    point_lights_ = 0;
-    spot_lights_ = 0;
-    directional_lights_ = 0;
+	point_lights_ = 0;
+	spot_lights_ = 0;
+	directional_lights_ = 0;
   }
 
   auto getLightNumber(interface::LightType) -> int;
   auto turnOffLights() -> void;
 
   static std::shared_ptr<Shader> fromString(const int versionMajor,
-                                            const int versionMinor,
-                                            std::string vertexCode,
-                                            std::string fragmentCode,
-                                            std::string geometryCode = {});
+											const int versionMinor,
+											std::string vertexCode,
+											std::string fragmentCode,
+											std::string geometryCode = {});
 
   static std::shared_ptr<Shader> fromFile(const int versionMajor,
-                                          const int versionMinor,
-                                          std::string vertexFile,
-                                          std::string fragmentFile,
-                                          std::string geometryFile = {});
+										  const int versionMinor,
+										  std::string vertexFile,
+										  std::string fragmentFile,
+										  std::string geometryFile = {});
 
- private:
+private:
   unsigned int point_lights_{0};
   unsigned int spot_lights_{0};
   unsigned int directional_lights_{0};
