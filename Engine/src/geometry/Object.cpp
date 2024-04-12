@@ -22,9 +22,9 @@ Object::Object(unsigned int vao, unsigned int vbo, unsigned int cnt,
   model_ = glm::mat4(1.0f);
 }
 
-Object::Object() : Entity() { model_ = glm::mat4(1.0f); }
+Object::Object() : ObjectInterface() { model_ = glm::mat4(1.0f); }
 
-void Object::render(std::shared_ptr<render::Camera> camera) {
+void Object::render(std::shared_ptr<render::Camera> camera, glm::mat4 mat) {
   if (!visible_)
 	return;
 
@@ -35,7 +35,7 @@ void Object::render(std::shared_ptr<render::Camera> camera) {
 
   shader_->setMat4fv("projection", camera->projectionMatrix());
   shader_->setMat4fv("view", camera->viewMatrix());
-  shader_->setMat4fv("model", model_);
+  shader_->setMat4fv("model", model_*mat);
 
   if (material_)
 	shader_->setFloat("material.shininess", material_.value().shininess);
@@ -63,12 +63,16 @@ void Object::render(std::shared_ptr<render::Camera> camera) {
   glBindVertexArray(0);
 }
 
-auto Object::position(glm::vec3 pos) -> void {
-  model_ = glm::translate(model_, pos);
-}
-
 auto Object::scale(float value) -> void {
   model_ = glm::scale(model_, glm::vec3(value));
+}
+
+auto Object::rotate(float angle, glm::vec3 axis) -> void {
+  model_ = glm::rotate(model_, glm::radians(angle), axis);
+}
+
+auto Object::translate(glm::vec3 pos) -> void {
+  model_ = glm::translate(model_, pos);
 }
 
 auto Object::setupPhysics(reactphysics3d::PhysicsWorld *world,
@@ -123,4 +127,13 @@ auto Object::process() -> void {
 	transform.getOpenGLMatrix(mat);
 	model_ = glm::make_mat4(mat);
   }
+}
+
+auto Object::prepare(input::ObjectPreparation input) -> void {
+  affectedByLights(input.lights);
+  setupPhysics(input.physics_world, input.physics_common);
+}
+
+void Object::setShader(std::shared_ptr<render::Shader> shader) {
+  shader_ = shader;
 }

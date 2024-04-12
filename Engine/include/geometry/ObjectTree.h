@@ -35,7 +35,7 @@ namespace geometry {
 
 struct ObjectNode {
   std::vector<std::shared_ptr<ObjectNode>> children;
-  std::vector<std::shared_ptr<Object>> meshes;
+  std::vector<std::shared_ptr<ObjectInterface>> meshes;
   glm::mat4x4 mat;
 };
 

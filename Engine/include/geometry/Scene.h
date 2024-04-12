@@ -34,6 +34,12 @@ using namespace omega::interface;
 namespace omega {
 namespace geometry {
 
+enum class FindPattern {
+  Exact,
+  Contains,
+  StartsWith,
+};
+
 class Scene {
 public:
   // constructor, expects a filepath to a 3D model.
@@ -47,14 +53,17 @@ public:
   void shaders(std::shared_ptr<render::Shader> shader,
 			   std::shared_ptr<render::Shader> lightShader);
   void lights(std::vector<std::shared_ptr<Light>>);
-  auto object(std::string) -> std::shared_ptr<Object>;
   auto scale(float) -> void;
   auto process(float) -> void;
   auto prepare() -> void;
   auto debug(bool val) -> void;
 
+  auto findFirst(std::string, FindPattern pattern = FindPattern::Exact ) -> std::shared_ptr<ObjectInterface>;
+  auto find(std::string, FindPattern pattern = FindPattern::Exact ) -> std::vector<std::shared_ptr<ObjectInterface>>;
+
+
   auto add(std::shared_ptr<ObjectNode> tree) ->void;
-  auto add(std::shared_ptr<Object> object) ->void;
+  auto add(std::shared_ptr<ObjectInterface> object) ->void;
   auto add(std::shared_ptr<Light> light) -> void { lights_.push_back(light); }
   auto add(std::shared_ptr<Camera> camera) -> unsigned int {
 	cameras_.push_back(camera);
@@ -63,14 +72,17 @@ public:
 
   auto setCurrentCamera(unsigned int index) -> void;
   auto currentCamera() -> std::shared_ptr<Camera> { return cameras_[current_camera_]; }
+
 private:
   void loadModel(std::string const &path);
   auto prepare(ObjectNodePtr node) -> void;
   auto render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera) -> void;
   auto process(ObjectNodePtr node) -> void;
-  auto object(std::string name, ObjectNodePtr node) -> std::shared_ptr<Object>;
   void shaders(std::shared_ptr<render::Shader> shader, ObjectNodePtr node);
   void lights(std::vector<std::shared_ptr<Light>> lights, ObjectNodePtr node);
+
+  auto findFirst(std::string name, ObjectNodePtr node, FindPattern pattern = FindPattern::Exact) -> std::shared_ptr<ObjectInterface>;
+  auto find(std::string name, ObjectNodePtr node, FindPattern pattern = FindPattern::Exact) -> std::vector<std::shared_ptr<ObjectInterface>>;
 
 protected:
   ObjectNodePtr _root;

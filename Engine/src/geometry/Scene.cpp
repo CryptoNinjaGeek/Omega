@@ -43,7 +43,7 @@ auto Scene::debug(bool val) -> void {
   physics_world_->setIsDebugRenderingEnabled(debug_);
 }
 
-auto Scene::add(std::shared_ptr<Object> object) -> void
+auto Scene::add(std::shared_ptr<ObjectInterface> object) -> void
 {
   if(_root ==nullptr)
 	_root = std::make_shared<ObjectNode>();
@@ -74,8 +74,11 @@ auto Scene::prepare(ObjectNodePtr node) -> void {
 	return;
 
   for (auto object : node->meshes) {
-	object->affectedByLights(lights_);
-	object->setupPhysics(physics_world_, &physics_common_);
+	object->prepare({
+	  .lights = lights_,
+	  .physics_world = physics_world_,
+	  .physics_common = &physics_common_,
+	});
   }
 
   for (auto child : node->children)
@@ -157,21 +160,23 @@ void Scene::lights(std::vector<std::shared_ptr<Light>> light_list, ObjectNodePtr
 }
 
 // function to find an object by name and return it
-auto Scene::object(std::string name) -> std::shared_ptr<Object> {
-  return object( name, _root);
+auto Scene::findFirst(std::string name, FindPattern pattern ) -> std::shared_ptr<ObjectInterface> {
+  return findFirst( name , _root, pattern);
 }
 
-auto Scene::object(std::string name, ObjectNodePtr node) -> std::shared_ptr<Object> {
+auto Scene::findFirst(std::string name, ObjectNodePtr node, FindPattern pattern) -> std::shared_ptr<ObjectInterface> {
   if (node == nullptr)
 	return nullptr;
 
   for (auto object : node->meshes) {
-	if (object->name()==name)
+	if ( ( object->name() == name && pattern == FindPattern::Exact ) ||
+		 ( object->name().find(name) != std::string::npos && pattern == FindPattern::Contains ) ||
+		 ( object->name().find(name) == 0 && pattern == FindPattern::StartsWith ) )
 	  return object;
   }
 
   for (auto child : node->children) {
-	auto obj = object(name, child);
+	auto obj = findFirst(name, child, pattern);
 	if (obj)
 	  return obj;
   }
@@ -221,3 +226,27 @@ auto Scene::setCurrentCamera(unsigned int index) -> void {
   current_camera_ = index;
 }
 
+auto Scene::find(std::string name, FindPattern pattern ) -> std::vector<std::shared_ptr<ObjectInterface>> {
+  return find( name , _root, pattern);
+}
+
+auto Scene::find(std::string name, ObjectNodePtr node, FindPattern pattern) -> std::vector<std::shared_ptr<ObjectInterface>> {
+  if (node == nullptr)
+	return {};
+
+  std::vector<std::shared_ptr<ObjectInterface>> objects;
+
+  for (auto object : node->meshes) {
+	if ( ( object->name() == name && pattern == FindPattern::Exact ) ||
+		( object->name().find(name) != std::string::npos && pattern == FindPattern::Contains ) ||
+		( object->name().find(name) == 0 && pattern == FindPattern::StartsWith ) )
+	  objects.push_back( object );
+  }
+
+  for (auto child : node->children) {
+	auto obj_list = find(name, child, pattern);
+	objects.insert(objects.end(), obj_list.begin(), obj_list.end());
+  }
+
+  return objects;
+}

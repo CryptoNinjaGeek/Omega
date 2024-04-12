@@ -2,7 +2,7 @@
 
 #include <system/Global.h>
 #include <render/Material.h>
-#include <interface/Entity.h>
+#include <interface/ObjectInterface.h>
 #include <interface/Light.h>
 #include <system/PhysicsObject.h>
 #include <memory>
@@ -19,25 +19,26 @@ class Shader;
 class Texture;
 }  // namespace render
 namespace geometry {
-
-enum class ObjectType { Elements, Array };
-
-class OMEGA_EXPORT Object : public interface::Entity {
+class OMEGA_EXPORT Object : public ObjectInterface {
 public:
   Object(unsigned int vao, unsigned int vbo, unsigned int cnt,
 		 ObjectType type = ObjectType::Array);
   Object();
 
-  virtual void render(std::shared_ptr<render::Camera>);
-  virtual auto setupPhysics(reactphysics3d::PhysicsWorld *, reactphysics3d::PhysicsCommon *) -> void;
+  virtual auto render(std::shared_ptr<render::Camera>, glm::mat4 mat = glm::mat4(1.0f)) -> void;
   virtual auto process() -> void;
+  virtual auto prepare(input::ObjectPreparation) -> void;
+  virtual auto setShader(std::shared_ptr<render::Shader> shader) -> void;
+
+  auto scale(float) -> void override;
+  auto translate(glm::vec3) -> void override;
+  auto rotate(float, glm::vec3) -> void override;
 
   auto debug(bool) -> void;
 
   void setName(std::string name) { name_ = name; }
   void setMaterial(render::Material material) { material_ = material; }
   void setModel(glm::mat4x4 mat) { model_ = mat; }
-  void setShader(std::shared_ptr<render::Shader> shader) { shader_ = shader; }
   void addTexture(std::shared_ptr<render::Texture> texture) {
 	textures_.push_back(texture);
   };
@@ -45,18 +46,20 @@ public:
 	textures_ = textures;
   };
 
-  void affectedByLights(std::vector<std::shared_ptr<interface::Light>> lights) {
+  void affectedByLights(std::vector<std::shared_ptr<interface::Light>> lights) override {
 	lights_ = lights;
   }
 
   glm::vec3 entityPosition() { return glm::vec3(model_[3]); }
 
   auto name() -> std::string { return name_; }
-  auto scale(float) -> void;
   auto position(glm::vec3) -> void;
   auto physics(physics::PhysicsObject physicsObject) -> void { physicsObject_ = physicsObject; }
   inline auto visible(bool val) -> void { visible_ = val; }
   inline auto visible() -> bool { return visible_; }
+
+private:
+  virtual auto setupPhysics(reactphysics3d::PhysicsWorld *, reactphysics3d::PhysicsCommon *) -> void;
 
 protected:
   std::string name_;

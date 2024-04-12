@@ -49,7 +49,7 @@ auto ObjectGenerator::plane(input::ObjectGenerator input)
   object->setName(input.name);
 
   if (input.position)
-	object->position(input.position.value());
+	object->translate(input.position.value());
   if (input.matrix)
 	object->setModel(input.matrix.value());
   if (input.material)

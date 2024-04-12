@@ -8,6 +8,7 @@
 #include <render/Material.h>
 #include <render/Texture.h>
 #include <geometry/Object.h>
+#include <geometry/ComplexObject.h>
 #include <system/FileSystem.h>
 #include <geometry/Scene.h>
 
@@ -71,18 +72,27 @@ public:
 	_scene->shaders(shader, plainShader);
 	_scene->debug(false);
 
-	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx");
+	auto gun = std::make_shared<ComplexObject>();
+	gun->load("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx");
+	gun->setShader(shader);
+	gun->translate(glm::vec3(0.0f, 0.3f, 0.0f));
+	gun->scale(0.01f);
+	gun->rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
+
+	_scene->add(gun);
 
 	auto idx = _scene->add(camera);
 
 	createLights();
-/*	generateCubes();
-	generateContainer();*/
+	generateCubes();
+	generateContainer();
 	generateGround();
 	generateDome();
 
 	_scene->prepare();
 	_scene->setCurrentCamera(idx);
+
+	_currentObject = gun;
 
 	setCamera(camera);
   }
@@ -176,19 +186,18 @@ public:
 
 	int nr = 0;
 	for (auto pos : cubePositions) {
-//	  float angle = 20.0f*(int)(rand()%20);
 	  float size = 0.1f*((float)(rand()%6) + 0.1f);
 	  auto mat = glm::mat4(1.0f);
 	  auto material = Material{.shininess = (float)(rand()%80)};
 
 	  mat = glm::translate(mat, pos);
-//	  mat = glm::rotate(mat, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 
 	  _scene->add(ObjectGenerator::box({.matrix = mat,
 										   .shader = shader,
 										   .textures = {texture4},
 										   .material = material,
 										   .size = size,
+										   .mass = 1.f*size,
 										   .name = "Cube" + std::to_string(nr++)}));
 	}
 
@@ -240,6 +249,36 @@ public:
 
   void keyEvent(int state, int key, int modifier, bool repeat) {
 	switch (key) {
+	case KEY_Y:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(0.0f, 0.1f, 0.0f));
+	  break;
+	case KEY_U:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(0.0f, -0.1f, 0.0f));
+	  break;
+	case KEY_H:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(-0.1f, 0.0f, 0.0f));
+	  break;
+	case KEY_J:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(0.1f, 0.0f, 0.0f));
+	  break;
+	case KEY_N:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(0.0f, 0.0f, 0.1f));
+	  break;
+	case KEY_M:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->translate(glm::vec3(0.0f, 0.0f, -0.1f));
+	  break;
+	case KEY_P:
+	  if (state==KEY_STATE_DOWN && _currentObject) {
+		auto position = _currentObject->entityPosition();
+		std::cout << "Position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
+	  }
+	  break;
 	case KEY_ESCAPE:
 	  if (state==KEY_STATE_DOWN)
 		quit();
@@ -255,22 +294,6 @@ public:
 	case KEY_F:
 	  if (state==KEY_STATE_DOWN)
 		setFullscreen(not isFullscreen());
-	  break;
-	case KEY_J:
-	  if (state==KEY_STATE_DOWN) {
-		auto object = _scene->object("Warehouse1.door1");
-		if (object)
-		  object->visible(!object->visible());
-
-	  }
-	  break;
-	case KEY_K:
-	  if (state==KEY_STATE_DOWN) {
-		auto object = _scene->object("Warehouse1.door2");
-		if (object)
-		  object->visible(!object->visible());
-
-	  }
 	  break;
 	default:Window::keyEvent(state, key, modifier, repeat);
 	  break;
@@ -289,6 +312,8 @@ public:
 
 private:
   std::shared_ptr<Scene> _scene;
+
+  std::shared_ptr<ObjectInterface> _currentObject{nullptr};
 
   std::shared_ptr<Shader> skyShader;
   std::shared_ptr<Shader> shader;

@@ -19,9 +19,9 @@ struct CubeTextureInput {
 namespace render {
 
 class OMEGA_EXPORT CubeTexture : public Texture {
- public:
+public:
   CubeTexture() = default;
-  bool load(input::CubeTextureInput);
+  bool load(omega::input::CubeTextureInput);
   virtual bool activate(int no);
 };
 };  // namespace render

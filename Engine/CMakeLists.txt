@@ -84,6 +84,8 @@ add_library(oEngine SHARED
 
         include/geometry/ObjectTree.h
         src/geometry/ObjectTree.cpp
+
+        include/interface/ObjectInterface.h
 )
 
 include_directories(oEngine PUBLIC include)
