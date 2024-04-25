@@ -2,22 +2,21 @@
 
 #include "system/Global.h"
 #include "render/Material.h"
-#include "Entity.h"
+#include "geometry/Entity.h"
 #include "Light.h"
-#include "system/PhysicsObject.h"
+#include "physics/PhysicsObjectInput.h"
 #include <memory>
+#include <utility>
 #include <vector>
 #include <optional>
 
 #include "glm/gtc/matrix_transform.hpp"
-#include "reactphysics3d/reactphysics3d.h"
 
 namespace omega {
 namespace input {
 struct ObjectPreparation {
   std::vector<std::shared_ptr<interface::Light>> lights;
-  reactphysics3d::PhysicsWorld *physics_world;
-  reactphysics3d::PhysicsCommon *physics_common;
+  glm::mat4 model;
 };
 }  // namespace input
 
@@ -27,13 +26,38 @@ class Shader;
 class Texture;
 }  // namespace render
 namespace geometry {
-enum class ObjectType { Elements, Array };
+enum class RenderType { Elements, Array };
+enum class ObjectType { ComplexObject, Object, SkyBox };
+
+struct ObjectData {
+  std::string name_;
+  unsigned int vao_;
+  unsigned int vbo_;
+  unsigned int count_;
+  RenderType render_type_{RenderType::Array};
+  ObjectType type_{ObjectType::Object};
+
+  glm::mat4 model_;
+
+  bool visible_{true};
+  bool debug_{false};
+
+  std::optional<render::Material> material_;
+  std::shared_ptr<render::Shader> shader_;
+  std::vector<std::shared_ptr<render::Texture>> textures_;
+  std::vector<std::shared_ptr<interface::Light>> lights_;
+};
 
 class OMEGA_EXPORT ObjectInterface : public interface::Entity {
 public:
-  ObjectInterface() = default;
+  ObjectInterface() {
+	data_ = std::make_shared<ObjectData>();
+  };
 
-  virtual void render(std::shared_ptr<render::Camera>, glm::mat4 mat = glm::mat4(1.0f)) = 0;
+  virtual ~ObjectInterface() {
+	data_.reset();
+  }
+
   virtual auto process() -> void = 0;
   virtual auto prepare(input::ObjectPreparation) -> void = 0;
   virtual void setShader(std::shared_ptr<render::Shader> shader) = 0;
@@ -43,15 +67,31 @@ public:
   virtual auto translate(glm::vec3) -> void = 0;
   virtual auto rotate(float, glm::vec3) -> void = 0;
 
-  void setName(std::string name) { name_ = name; }
-  auto name() -> std::string { return name_; }
+  virtual auto setMaterial(render::Material material) -> void = 0;
+  virtual auto material() -> std::optional<render::Material> = 0;
 
-  inline auto visible(bool val) -> void { visible_ = val; }
-  inline auto visible() -> bool { return visible_; }
+  virtual auto textures() -> std::vector<std::shared_ptr<render::Texture>> = 0;
+  virtual auto lights() -> std::vector<std::shared_ptr<interface::Light>> = 0;
+
+  virtual auto shader() -> std::shared_ptr<render::Shader> = 0;
+
+  void setName(std::string name) { data_->name_ = std::move(name); }
+  auto name() -> std::string { return data_->name_; }
+
+  inline auto visible(bool val) -> void { data_->visible_ = val; }
+  inline auto visible() -> bool { return data_->visible_; }
+
+  virtual auto debug(bool val) -> void { data_->debug_ = val; }
+  auto debug() -> bool { return data_->debug_; }
+
+  auto model() -> glm::mat4 { return data_->model_; };
+  auto model(glm::mat4 model) -> void { data_->model_ = model; }
+
+  auto data() -> std::shared_ptr<ObjectData> { return data_; }
+  auto type() -> ObjectType { return data_->type_; }
 
 protected:
-  std::string name_;
-  bool visible_{true};
+  std::shared_ptr<ObjectData> data_;
 };
 }  // namespace geometry
 }  // namespace omega

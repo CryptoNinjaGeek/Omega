@@ -2,10 +2,12 @@
 #include <system/FileSystem.h>
 #include <geometry/Object.h>
 #include <utils/ObjectGenerator.h>
+#include <utils/utils.h>
 #include <render/Texture.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <stb_image.h>
 
 #include <assimp/Importer.hpp>
@@ -22,20 +24,22 @@ using namespace omega::render;
 using namespace omega::geometry;
 using namespace std;
 
-auto Loader::loadModel(std::string path) -> ObjectNodePtr {
-  auto bytes = fs::instance()->data(path);
-  auto ext = fs::instance()->extension(path);
+#define CM_TO_M 0.01f
+
+auto Loader::loadModel(input::LoaderInput input) -> ObjectNodePtr {
+  auto bytes = fs::instance()->data(input.path);
+  auto ext = fs::instance()->extension(input.path);
   auto tree = std::make_shared<ObjectNode>();
 
   if (bytes.size()==0) {
-	std::cout << "Error loading file => " << path << std::endl;
+	std::cout << "Error loading file => " << input.path << std::endl;
 	return nullptr;
   }
 
   Assimp::Importer importer;
   const aiScene *scene = importer.ReadFileFromMemory(
 	  bytes.data(), bytes.size(),
-	  aiProcess_Triangulate | aiProcess_GenSmoothNormals |
+	  aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FindInstances | aiProcess_ValidateDataStructure |
 		  aiProcess_CalcTangentSpace, ext.c_str());
 // check for errors
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
@@ -45,47 +49,55 @@ auto Loader::loadModel(std::string path) -> ObjectNodePtr {
 	return nullptr;
   }
 
-// process ASSIMP's root node recursively
-  tree = processNode(scene->mRootNode, scene);
+  tree = processNode(scene->mRootNode, scene, input);
+  processAnimations(scene, tree, input);
 
   return tree;
 }
 
-auto Loader::processNode(aiNode *node, const aiScene *scene) -> ObjectNodePtr {
+auto Loader::processNode(aiNode *node, const aiScene *scene, input::LoaderInput input) -> ObjectNodePtr {
   auto tree = std::make_shared<ObjectNode>();
 
   // process each mesh located at the current node
-  glm::mat4x4 mat(node->mTransformation.a1, node->mTransformation.b1,
-				  node->mTransformation.c3, node->mTransformation.d1,
-				  node->mTransformation.a2, node->mTransformation.b2,
-				  node->mTransformation.c2, node->mTransformation.d2,
-				  node->mTransformation.a3, node->mTransformation.b3,
-				  node->mTransformation.c3, node->mTransformation.d3,
-				  node->mTransformation.a4, node->mTransformation.b4,
-				  node->mTransformation.c4, node->mTransformation.d4);
+  glm::mat4x4 mat = utils::convertMatrix(node->mTransformation);
+  glm::vec3 scale;
+  scale.x = glm::length(glm::vec3(mat[0])); // Basis vector X
+  scale.y = glm::length(glm::vec3(mat[1])); // Basis vector Y
+  scale.z = glm::length(glm::vec3(mat[2])); // Basis vector Z
 
-  tree->mat = mat;
+  if (input.scale!=1.f) {
+	mat[3] *= input.scale;
+  }
+  tree->mat = preprocess(mat);
+
+  if (input.debug) {
+	std::cout << "------------(" << node->mName.C_Str() << ")------------" << std::endl;
+	std::cout << "Matrix: " << glm::to_string(mat) << std::endl;
+	std::cout << "Scale: " << glm::to_string(scale) << std::endl;
+	std::cout << "Translation: " << glm::to_string(mat[3]) << std::endl;
+	std::cout << "---------------------------------" << std::endl;
+  }
 
   for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 	// the node object only contains indices to index the actual objects in
 	// the scene. the scene contains all the data, node is just to keep
 	// stuff organized (like relations between nodes).
 	aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-	auto object = processMesh(node->mName.C_Str(), mesh, scene);
+	auto object = processMesh(node->mName.C_Str(), mesh, scene, input, scale.x);
 	if (object)
 	  tree->meshes.push_back(object);
   }
   // after we've processed all of the meshes (if any) we then recursively
   // process each of the children nodes
   for (unsigned int i = 0; i < node->mNumChildren; i++) {
-	auto child = processNode(node->mChildren[i], scene);
+	auto child = processNode(node->mChildren[i], scene, input);
 	tree->children.push_back(child);
   }
   return tree;
 }
 
 shared_ptr<Object> Loader::processMesh(std::string name, aiMesh *mesh,
-									   const aiScene *scene) {
+									   const aiScene *scene, input::LoaderInput input, double scale) {
 
   float minx, miny, minz, maxx, maxy, maxz;
   // data to fill
@@ -101,10 +113,10 @@ shared_ptr<Object> Loader::processMesh(std::string name, aiMesh *mesh,
 	// to glm's vec3 class so we transfer the data to
 	// this placeholder glm::vec3 first.
 	// positions
-	vector.x = mesh->mVertices[i].x;
-	vector.y = mesh->mVertices[i].y;
-	vector.z = mesh->mVertices[i].z;
-	vertex.position = vector;
+	vector.x = mesh->mVertices[i].x*input.scale;
+	vector.y = mesh->mVertices[i].y*input.scale;
+	vector.z = mesh->mVertices[i].z*input.scale;
+	vertex.position = preprocess(vector);
 
 	if (i==0) {
 	  minx = maxx = vector.x;
@@ -191,7 +203,15 @@ shared_ptr<Object> Loader::processMesh(std::string name, aiMesh *mesh,
   auto object = utils::ObjectGenerator::mesh({.vertices = vertices,
 												 .indices = indices,
 												 .textures = textures,
-												 .name = name});
+												 .name = name,
+												 .boundingBox = {minx, miny, minz, maxx, maxy, maxz},
+												 .scale = scale});
+
+  if (input.debug) {
+	std::cout << "Mesh: " << name << " Min: (" << minx << "," << miny << "," << minz << ") - Max: (" << maxx << ","
+			  << maxy
+			  << "," << maxz << ")" << std::endl;
+  }
 
   return object;
 }
@@ -213,3 +233,54 @@ std::map<std::string, std::shared_ptr<Texture>> Loader::loadMaterialTextures(aiM
   }
   return textures;
 }
+
+glm::vec3 Loader::preprocess(glm::vec3 v) {
+  return glm::vec3(v.x*CM_TO_M, v.y*CM_TO_M, v.z*CM_TO_M);
+}
+
+glm::mat4 Loader::preprocess(glm::mat4 m) {
+  m[3] =
+	  glm::vec4(m[3].x*CM_TO_M, m[3].y*CM_TO_M, m[3].z*CM_TO_M, 1.0f);
+
+  return m;
+}
+
+void Loader::processAnimations(const aiScene *scene, ObjectNodePtr tree, input::LoaderInput) {
+  for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
+	auto animation = scene->mAnimations[i];
+	auto name = animation->mName.C_Str();
+	auto duration = animation->mDuration;
+	auto ticks = animation->mTicksPerSecond;
+	auto channels = animation->mNumChannels;
+
+	std::cout << "Animation: " << name << " Duration: " << duration << " Ticks: " << ticks << " Channels: " << channels
+			  << std::endl;
+
+	for (unsigned int j = 0; j < animation->mNumChannels; j++) {
+	  auto channel = animation->mChannels[j];
+	  auto nodeName = channel->mNodeName.C_Str();
+	  auto numPosKeys = channel->mNumPositionKeys;
+	  auto numRotKeys = channel->mNumRotationKeys;
+	  auto numScaleKeys = channel->mNumScalingKeys;
+
+	  std::cout << "Node: " << nodeName << " PosKeys: " << numPosKeys << " RotKeys: " << numRotKeys << " ScaleKeys: "
+				<< numScaleKeys << std::endl;
+
+	  if (numPosKeys==numRotKeys && numPosKeys==numScaleKeys) {
+		for (unsigned int k = 0; k < numPosKeys; k++) {
+		  auto positionKey = channel->mPositionKeys[k];
+		  auto rotationKey = channel->mRotationKeys[k];
+		  auto scaleKey = channel->mScalingKeys[k];
+		  auto mat = convertMatrix(rotationKey.mValue.GetMatrix());
+
+		  mat[3] = glm::vec4(positionKey.mValue.x, positionKey.mValue.y, positionKey.mValue.z, 1.0f);
+
+		  std::cout << "Keys: " << k << " Time: " << time << " Matrix: "
+					<< glm::to_string(mat) << std::endl;
+		}
+	  }
+	}
+  }
+}
+
+

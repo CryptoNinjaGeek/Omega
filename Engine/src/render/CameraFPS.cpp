@@ -1,5 +1,5 @@
 #include <render/CameraFPS.h>
-#include <reactphysics3d/reactphysics3d.h>
+#include "physics/PhysicsEngine.h"
 
 using namespace omega::render;
 
@@ -11,28 +11,31 @@ CameraFPS::CameraFPS(float posX, float posY, float posZ, float upX, float upY, f
 }
 
 void CameraFPS::processKeyboard(Camera_Movement direction, float deltaTime) {
+  if (!physicsObject_) {
+	Camera::processKeyboard(direction, deltaTime);
+	return;
+  }
+
   float velocity = movement_speed_*deltaTime;
-  auto world_position = collider_->getLocalToWorldTransform().getPosition();
-  position_ = glm::vec3(world_position.x, world_position.y, world_position.z);
-  reactphysics3d::Vector3 camVelocity = body_->getLinearVelocity();
+  auto camVelocity = physicsObject_->velocity();
   float camSpeed = camVelocity.y;
 
   avg_camera_speed = avg_camera_speed*0.9f + camSpeed*0.1f;
-  float latteralSpeed = reactphysics3d::Vector2(camVelocity.x, camVelocity.z).length();
+  float latteralSpeed = glm::length(glm::vec2(camVelocity.x, camVelocity.z));
 
   if (direction==JUMP && abs(camSpeed) < 1) {
-	body_->applyWorldForceAtCenterOfMass(reactphysics3d::Vector3(0, 1, 0)*300);
+	physicsObject_->applyForce(glm::vec3(0, 1, 0)*SPEED*velocity);
   }
   if (direction==FORWARD && latteralSpeed < 5) {
-	body_->applyWorldForceAtCenterOfMass(reactphysics3d::Vector3(front_.x, front_.y, front_.z)*20);
+	physicsObject_->move(glm::vec3(front_.x, 0, front_.z)*SPEED*velocity);
   }
   if (direction==BACKWARD && latteralSpeed < 5) {
-	body_->applyWorldForceAtCenterOfMass(reactphysics3d::Vector3(front_.x, front_.y, front_.z)*-20);
+	physicsObject_->move(glm::vec3(front_.x, 0, front_.z)*-1.f*SPEED*velocity);
   }
   if (direction==LEFT) {
-	body_->applyWorldForceAtCenterOfMass(reactphysics3d::Vector3(-1*right_.x, -1*right_.y, -1*right_.z)*20);
+	physicsObject_->move(glm::vec3(-1*right_.x, 0, -1*right_.z)*SPEED*velocity);
   }
   if (direction==RIGHT) {
-	body_->applyWorldForceAtCenterOfMass(reactphysics3d::Vector3(right_.x, right_.y, right_.z)*20);
+	physicsObject_->move(glm::vec3(right_.x, 0, right_.z)*SPEED*velocity);
   }
 }

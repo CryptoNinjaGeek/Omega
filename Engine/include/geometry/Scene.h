@@ -19,7 +19,7 @@
 #include <geometry/Vertex.h>
 #include <utils/ObjectGenerator.h>
 
-#include <reactphysics3d/reactphysics3d.h>
+#include "physics/PhysicsEngine.h"
 
 #include <string>
 #include <fstream>
@@ -43,15 +43,16 @@ enum class FindPattern {
 class Scene {
 public:
   // constructor, expects a filepath to a 3D model.
-  explicit Scene(bool gamma = false);
-  explicit Scene(std::string const &path, bool gamma = false);
+  Scene(bool physics = true, bool gamma = false);
+  Scene(std::string const &path,bool physics = true, bool gamma = false);
 
   auto import(std::string const &path) -> void;
 
   void render();
   void render(std::shared_ptr<render::Camera> camera);
   void shaders(std::shared_ptr<render::Shader> shader,
-			   std::shared_ptr<render::Shader> lightShader);
+			   std::shared_ptr<render::Shader> lightShader,
+			   std::shared_ptr<render::Shader> debugShader);
   void lights(std::vector<std::shared_ptr<Light>>);
   auto scale(float) -> void;
   auto process(float) -> void;
@@ -76,7 +77,7 @@ public:
 private:
   void loadModel(std::string const &path);
   auto prepare(ObjectNodePtr node) -> void;
-  auto render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera) -> void;
+  auto render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera, glm::mat4 model = glm::mat4(1.0f)) -> void;
   auto process(ObjectNodePtr node) -> void;
   void shaders(std::shared_ptr<render::Shader> shader, ObjectNodePtr node);
   void lights(std::vector<std::shared_ptr<Light>> lights, ObjectNodePtr node);
@@ -91,17 +92,14 @@ protected:
   std::vector<std::shared_ptr<Camera>> cameras_;
   std::shared_ptr<Shader> lightShader_;
   std::shared_ptr<Shader> meshShader_;
+  std::shared_ptr<Shader> debugShader_;
+
+  std::shared_ptr<ObjectInterface> aabb_{nullptr};
 
   unsigned int current_camera_{0};
-
-  // logging and memory management
-  reactphysics3d::PhysicsCommon physics_common_;
-
-  // Create a physics world
-  reactphysics3d::PhysicsWorld *physics_world_;
-
-  bool gammaCorrection{false};
+  bool gammaCorrection_{false};
   bool debug_{false};
+  bool physics_{false};
 };
 }  // namespace geometry
 }  // namespace omega

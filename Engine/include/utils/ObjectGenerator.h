@@ -5,6 +5,7 @@
 #include <render/CubeTexture.h>
 #include <interface/Light.h>
 #include <geometry/Vertex.h>
+#include <geometry/BoundingBox.h>
 #include <optional>
 #include <memory>
 #include <map>
@@ -27,16 +28,20 @@ struct ObjectGenerator {
   std::vector<std::shared_ptr<omega::render::Texture>> textures;
   std::optional<omega::render::Material> material;
   std::optional<std::vector<std::shared_ptr<interface::Light>>> lights;
-  float size{0.5f};
+  float size{1.0f};
   float mass{1.f};
   std::string name;
+  bool physics{true};
+  bool lighting{true};
 };
 struct MeshInput {
   std::vector<omega::geometry::Vertex> vertices;
   std::vector<unsigned int> indices;
   std::map<std::string, std::shared_ptr<omega::render::Texture>> textures;
   std::string name;
+  geometry::BoundingBox boundingBox;
   unsigned int flags{0};
+  double scale{1.f};
 };
 }  // namespace input
 

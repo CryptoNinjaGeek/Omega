@@ -5,16 +5,13 @@
 #include <string>
 #include <memory>
 
-#include <geometry/Point3.h>
-#include <geometry/Matrix.h>
 #include <geometry/Math.h>
 #include <system/Global.h>
 #include <render/Shader.h>
-#include <interface/Entity.h>
+#include "geometry/Entity.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <reactphysics3d/reactphysics3d.h>
 
 namespace omega {
 namespace render {
@@ -24,7 +21,7 @@ enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT, JUMP };
 // Default camera values
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
-const float SPEED = 2.5f;
+const float SPEED = 3.5f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
 
@@ -58,10 +55,11 @@ public:
 									  glm::vec3 worldUp);
   void updateCameraVectors();
 
-  glm::vec3 entityPosition() { return position_; }
-  glm::vec3 entityDirection() { return front_; }
+  auto entityPosition() -> glm::vec3 override { return position_; }
+  auto entityDirection() -> glm::vec3 override { return front_; }
+  auto entityModel() -> glm::mat4 override;
 
-  auto setupPhysics(reactphysics3d::PhysicsWorld *, reactphysics3d::PhysicsCommon *) -> void;
+  auto setupPhysics(glm::mat4 mat = glm::mat4(1.0f)) -> void;
 
 protected:
   // camera Attributes
@@ -77,9 +75,7 @@ protected:
   float movement_speed_;
   float mouse_sensitivity_;
   float zoom_;
-
-  reactphysics3d::RigidBody *body_{nullptr};
-  reactphysics3d::Collider *collider_{nullptr};
+  float eye_adjustment_{0.0f};
 
   glm::vec3 position_;
   glm::vec3 front_;

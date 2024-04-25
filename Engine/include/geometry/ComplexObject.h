@@ -19,7 +19,7 @@
 #include <geometry/Object.h>
 #include <geometry/ObjectTree.h>
 
-#include <reactphysics3d/reactphysics3d.h>
+#include "physics/PhysicsEngine.h"
 
 #include <string>
 #include <fstream>
@@ -36,10 +36,9 @@ namespace geometry {
 
 class ComplexObject : public ObjectInterface {
 public:
-  ComplexObject();
+  ComplexObject(bool debug = false);
 
-  auto load(std::string const &path) -> void;
-  auto render(std::shared_ptr<render::Camera>, glm::mat4) -> void override;
+  auto load(std::string const &path, double scale = 1.f) -> void;
   auto process() -> void override;
   auto prepare(input::ObjectPreparation) -> void override;
   auto setShader(std::shared_ptr<render::Shader> shader) -> void override;
@@ -48,16 +47,18 @@ public:
   auto scale(float) -> void override;
   auto translate(glm::vec3) -> void override;
   auto rotate(float, glm::vec3) -> void override;
+  auto entityModel() -> glm::mat4 override;
 
-  glm::vec3 entityPosition() override;
-  
+  auto root() -> ObjectNodePtr { return _root; }
+
 private:
   auto prepare(ObjectNodePtr node, input::ObjectPreparation input) -> void;
-  auto render(ObjectNodePtr node, glm::mat4, std::shared_ptr<render::Camera> camera) -> void;
+  auto render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera, glm::mat4 model = glm::mat4(1.0f)) -> void;
   auto process(ObjectNodePtr node) -> void;
   auto shaders(ObjectNodePtr node, std::shared_ptr<render::Shader> shader) -> void;
 
 protected:
+  bool debug_{false};
   ObjectNodePtr _root;
 };
 }  // namespace geometry

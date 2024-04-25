@@ -5,10 +5,6 @@
 #include <string>
 
 #include <system/Global.h>
-#include <geometry/Matrix.h>
-#include <geometry/Point2.h>
-#include <geometry/Point3.h>
-#include <geometry/Point4.h>
 
 #include <interface/Light.h>
 

@@ -6,11 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(OpenGL REQUIRED)
 
 add_library(oEngine SHARED
-        src/geometry/Quaternion.cpp
-        src/geometry/Point2.cpp
-        src/geometry/Point3.cpp
         src/geometry/Plane.cpp
-        src/geometry/Matrix.cpp
         src/render/Window.cpp
         src/system/System.cpp
         src/render/Shader.cpp
@@ -18,14 +14,9 @@ add_library(oEngine SHARED
         src/other/glad.c
 
         include/system/Global.h
-        include/geometry/Quaternion.h
-        include/geometry/Point2.h
-        include/geometry/Point3.h
         include/geometry/Math.h
         include/geometry/Plane.h
-        include/geometry/Matrix.h
-        include/geometry/Point4.h
-        include/geometry/Box.h
+        include/geometry/BoundingBox.h
         include/geometry/Sphere.h
         include/geometry/BoxBase.h
         include/render/Window.h
@@ -42,7 +33,7 @@ add_library(oEngine SHARED
         src/geometry/Object.cpp
         include/utils/ObjectGenerator.h
         include/render/Material.h
-        include/interface/Entity.h
+        include/geometry/Entity.h
         include/interface/Light.h
         include/render/DirectionalLight.h
         include/render/SpotLight.h
@@ -67,7 +58,7 @@ add_library(oEngine SHARED
         src/utils/Objects/Plane.cpp
         src/utils/Objects/Container.cpp
         src/geometry/Scene.cpp
-        include/system/PhysicsObject.h
+        include/physics/PhysicsObjectInput.h
 
         src/render/Camera.cpp
         src/render/CameraFly.cpp
@@ -86,6 +77,14 @@ add_library(oEngine SHARED
         src/geometry/ObjectTree.cpp
 
         include/interface/ObjectInterface.h
+        include/utils/utils.h
+
+        include/physics/PhysicsEngine.h
+        src/physics/PhysicsEngine.cpp
+        src/geometry/Entity.cpp
+        src/physics/PhysicsObject.cpp
+        src/render/OpenGLRender.cpp
+        include/render/OpenGLRender.h
 )
 
 include_directories(oEngine PUBLIC include)
@@ -102,7 +101,6 @@ target_link_libraries(oEngine
         glfw
         zip
         assimp
-        reactphysics3d
 )
 
 target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB GL_SILENCE_DEPRECATION)

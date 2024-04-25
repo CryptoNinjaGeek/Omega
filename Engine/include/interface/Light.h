@@ -2,7 +2,7 @@
 
 #include "system/Global.h"
 #include "render/Material.h"
-#include <interface/Entity.h>
+#include "geometry/Entity.h"
 #include <memory>
 #include <vector>
 
@@ -18,11 +18,11 @@ namespace interface {
 enum class LightType { POINT, DIRECTIONAL, SPOT };
 
 class OMEGA_EXPORT Light : public Entity {
- public:
+public:
   Light() = default;
 
   virtual void render(std::shared_ptr<render::Camera>,
-                      std::shared_ptr<render::Shader>){};
+					  std::shared_ptr<render::Shader>) {};
   virtual void dump() = 0;
   virtual LightType type() = 0;
   virtual void setup(std::shared_ptr<render::Shader>) = 0;

@@ -9,7 +9,7 @@
 namespace omega {
 namespace input {
 struct SpotLightInput {
-  std::optional<std::shared_ptr<interface::Entity>> tracking;
+  std::shared_ptr<interface::Entity> follow;
   glm::vec3 position;
   glm::vec3 direction;
   glm::vec3 ambient;
@@ -25,27 +25,25 @@ struct SpotLightInput {
 namespace render {
 
 class OMEGA_EXPORT SpotLight : public interface::Light {
- public:
+public:
   SpotLight(input::SpotLightInput input)
-      : tracking_(input.tracking),
-        position_(input.position),
-        direction_(input.direction),
-        ambient_(input.ambient),
-        diffuse_(input.diffuse),
-        specular_(input.specular),
-        constant_(input.constant),
-        linear_(input.linear),
-        quadratic_(input.quadratic),
-        cutOff_(input.cutOff),
-        outerCutOff_(input.outerCutOff) {}
+	  : position_(input.position),
+		direction_(input.direction),
+		ambient_(input.ambient),
+		diffuse_(input.diffuse),
+		specular_(input.specular),
+		constant_(input.constant),
+		linear_(input.linear),
+		quadratic_(input.quadratic),
+		cutOff_(input.cutOff),
+		outerCutOff_(input.outerCutOff) { follow(input.follow); }
 
   interface::LightType type() { return interface::LightType::SPOT; }
 
   void setup(std::shared_ptr<render::Shader>);
   void dump();
 
- private:
-  std::optional<std::shared_ptr<interface::Entity>> tracking_;
+private:
   glm::vec3 position_;
   glm::vec3 direction_;
   glm::vec3 ambient_;

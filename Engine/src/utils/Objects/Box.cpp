@@ -81,6 +81,7 @@ auto ObjectGenerator::box(input::ObjectGenerator input)
   object->setTextures(input.textures);
   object->setShader(input.shader);
   object->setName(input.name);
+  object->lighting(input.lighting);
 
   if (input.position)
 	object->translate(input.position.value());
@@ -91,13 +92,15 @@ auto ObjectGenerator::box(input::ObjectGenerator input)
   if (input.lights)
 	object->affectedByLights(input.lights.value());
 
-  object->physics({
-					  .bodyType = physics::BodyType::DYNAMIC,
-					  .colliderType = physics::ColliderType::BOX,
-					  .boundingBox = glm::vec3(input.size, input.size, input.size),
-					  .mass = input.mass,
-					  .bounciness = 0.1f,
-				  });
+  if (input.physics) {
+	object->physics({
+						.bodyType = physics::BodyType::DYNAMIC,
+						.colliderType = physics::ColliderType::BOX,
+						.boundingBox = {-input.size, -input.size, -input.size, input.size, input.size, input.size},
+						.mass = input.mass,
+						.bounciness = 0.1f,
+					});
+  }
 
   return object;
 }

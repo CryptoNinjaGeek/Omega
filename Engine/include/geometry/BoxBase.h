@@ -1,10 +1,8 @@
 #pragma once
 
-#include <geometry/Point3.h>
 #include <geometry/Math.h>
 
 namespace omega::geometry {
-template<class T>
 class BoxBase {
 public:
   enum Points {
@@ -39,7 +37,7 @@ public:
 
   /// Return the point index for the corner point that corresponds
   /// to the octant that @a p points to.
-  static Points getPointIndexFromOctant(const Point3<T> &p) {
+  static Points getPointIndexFromOctant(const glm::vec3 &p) {
 	if (p.x > 0.f)  // right
 	{
 	  if (p.y > 0.f)  // Far
@@ -87,7 +85,7 @@ public:
 	NUM_PLANES
   };
 
-  enum PlaneMasks : T {
+  enum PlaneMasks {
 	PlaneMaskLeft = (1 << LeftPlane),
 	PlaneMaskRight = (1 << RightPlane),
 	PlaneMaskTop = (1 << TopPlane),
@@ -99,7 +97,7 @@ public:
   };
 
   ///
-  static Points getPlanePointIndex(Planes plane, T i) {
+  static Points getPlanePointIndex(Planes plane, int i) {
 	switch (plane) {
 	case LeftPlane:
 	  switch (i) {
@@ -107,7 +105,7 @@ public:
 	  case 1:return NearTopLeft;
 	  case 2:return FarTopLeft;
 	  case 3:return FarBottomLeft;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
 	case RightPlane:
@@ -116,7 +114,7 @@ public:
 	  case 1:return FarBottomRight;
 	  case 2:return FarTopRight;
 	  case 3:return NearTopRight;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
 	case NearPlane:
@@ -125,7 +123,7 @@ public:
 	  case 1:return NearBottomRight;
 	  case 2:return NearTopRight;
 	  case 3:return NearTopLeft;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
 	case FarPlane:
@@ -134,7 +132,7 @@ public:
 	  case 1:return FarTopLeft;
 	  case 2:return FarTopRight;
 	  case 3:return FarBottomRight;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
 	case TopPlane:
@@ -143,7 +141,7 @@ public:
 	  case 1:return NearTopRight;
 	  case 2:return FarTopRight;
 	  case 3:return FarTopLeft;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
 	case BottomPlane:
@@ -152,10 +150,10 @@ public:
 	  case 1:return FarBottomLeft;
 	  case 2:return FarBottomRight;
 	  case 3:return NearBottomRight;
-	  default:return -1;
+	  default:return InvalidPoint;
 	  }
 	  break;
-	default:return -1;
+	default:return InvalidPoint;
 	}
 	return InvalidPoint;
   }

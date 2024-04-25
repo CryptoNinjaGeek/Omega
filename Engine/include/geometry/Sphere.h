@@ -1,71 +1,66 @@
 #pragma once
 
 #include <geometry/Math.h>
-#include <geometry/Point3.h>
+#include <glm/gtx/norm.hpp>
 
 namespace omega {
 namespace geometry {
-template<class T>
 class Sphere {
 public:
-  Point3 <T> center;
-  T radius;
+  glm::vec3 center;
+  float radius;
 
 public:
-  Sphere<T>() {}
+  Sphere() {}
 
-  Sphere<T>(const Point3 <T> &in_rPosition, const T in_rRadius)
+  Sphere(const glm::vec3 &in_rPosition, const float in_rRadius)
 	  : center(in_rPosition),
 		radius(in_rRadius) {
 	if (radius < 0.0f)
 	  radius = 0.0f;
   }
 
-  bool isContained(const Point3 <T> &in_rContain) const;
+  bool isContained(const glm::vec3 &in_rContain) const;
 
-  bool isContained(const Sphere<T> &in_rContain) const;
+  bool isContained(const Sphere &in_rContain) const;
 
-  bool isIntersecting(const Sphere<T> &in_rIntersect) const;
+  bool isIntersecting(const Sphere &in_rIntersect) const;
 
-  bool intersectsRay(const Point3 <T> &start, const Point3 <T> &end) const;
+  bool intersectsRay(const glm::vec3 &start, const glm::vec3 &end) const;
 
-  T distanceTo(const Point3 <T> &pt) const;
+  float distanceTo(const glm::vec3 &pt) const;
 
-  T squareDistanceTo(const Point3 <T> &pt) const;
+  float squareDistanceTo(const glm::vec3 &pt) const;
 };
 
-template<class T>
-inline bool Sphere<T>::isContained(const Point3 <T> &in_rContain) const {
-  T distSq = (center - in_rContain).lenSquared();
+inline bool Sphere::isContained(const glm::vec3 &in_rContain) const {
+  float distSq = glm::length2(center - in_rContain);
 
   return (distSq <= (radius*radius));
 }
 
-template<class T>
-inline bool Sphere<T>::isContained(const Sphere<T> &in_rContain) const {
+inline bool Sphere::isContained(const Sphere &in_rContain) const {
   if (radius < in_rContain.radius)
 	return false;
 
   // Since our radius is guaranteed to be >= other's, we
   //  can dodge the sqrt() here.
   //
-  T dist = (in_rContain.center - center).lenSquared();
+  float dist = glm::length2(in_rContain.center - center);
 
   return (dist <= ((radius - in_rContain.radius)*
 	  (radius - in_rContain.radius)));
 }
 
-template<class T>
-inline bool Sphere<T>::isIntersecting(const Sphere<T> &in_rIntersect) const {
-  T distSq = (in_rIntersect.center - center).lenSquared();
+inline bool Sphere::isIntersecting(const Sphere &in_rIntersect) const {
+  float distSq = glm::length2(in_rIntersect.center - center);
 
   return (distSq <= ((in_rIntersect.radius + radius)*
 	  (in_rIntersect.radius + radius)));
 }
 
-template<class T>
-inline T Sphere<T>::distanceTo(const Point3 <T> &toPt) const {
-  return (center - toPt).len() - radius;
+inline float Sphere::distanceTo(const glm::vec3 &toPt) const {
+  return glm::length(center - toPt) - radius;
 }
 }
 }

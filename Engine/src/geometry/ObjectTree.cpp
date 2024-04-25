@@ -18,8 +18,5 @@ ObjectTree::ObjectTree() {
 void ObjectTree::render(std::shared_ptr<render::Camera> camera) {
 }
 
-auto ObjectTree::setupPhysics(reactphysics3d::PhysicsWorld *world, reactphysics3d::PhysicsCommon *common) -> void {
-}
-
 auto ObjectTree::process() -> void {
 }

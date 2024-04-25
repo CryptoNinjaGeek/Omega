@@ -1,11 +1,11 @@
 #include <iostream>
 
-#include <geometry/Point3.h>
 #include <render/Window.h>
 #include <system/System.h>
 #include <render/CameraFPS.h>
 #include <render/Shader.h>
 #include <render/Material.h>
+#include <render/OpenGLRender.h>
 #include <render/Texture.h>
 #include <geometry/Object.h>
 #include <geometry/ComplexObject.h>
@@ -33,8 +33,8 @@ public:
 	fs::instance()->add(
 		"/Users/cta/Development/personal/Omega/Demo/resources.zip");
 
-	auto camera = std::make_shared<CameraFPS>(glm::vec3(0.0f, 1.0f, 0.0f),
-											  glm::vec3(0.0f, 2.0f, 0.0f), -110.f);
+	auto camera = std::make_shared<CameraFPS>(glm::vec3(5.0f, 1.8f, 5.0f),
+											  glm::vec3(0.0f, 4.0f, 0.0f), -90.f);
 	shader = Shader::fromFile(4,
 							  2,
 							  ":/shaders/core.vs",
@@ -50,6 +50,12 @@ public:
 		Shader::fromFile(4, 2, ":/shaders/skybox.vs", ":/shaders/skybox.fs");
 	skyShader->setInt("skybox", 0);
 
+	colorShader =
+		Shader::fromFile(4, 2,
+						 "/Users/cta/Development/personal/Omega/Demo/Resources/shaders/color.vs",
+						 "/Users/cta/Development/personal/Omega/Demo/Resources/shaders/color.fs");
+	colorShader->setInt("texture1", 0);
+
 	texture1 = std::make_shared<Texture>();
 	texture1->load(":/textures/Cargo_container_v1.tga");
 
@@ -62,37 +68,47 @@ public:
 	texture4 = std::make_shared<Texture>();
 	texture4->load(":/textures/container2.png");
 
+	debugTexture = std::make_shared<Texture>();
+	debugTexture->load("/Users/cta/Development/personal/Omega/Demo/Resources/textures/aabb.png");
+
+	OpenGLRender::instance()->debugShader(colorShader);
+	OpenGLRender::instance()->debugTexture(debugTexture);
+
 /*
 	_scene = std::make_shared<Scene>("/Users/cta/Development/personal/Omega/Demo/Resources/models/big_map.fbx");
 	_scene->shaders(shader, plainShader);
 	_scene->lights(lights_);
 	_scene->scale(0.2f);
 */
-	_scene = std::make_shared<Scene>(false);
-	_scene->shaders(shader, plainShader);
-	_scene->debug(false);
-
+	_scene = std::make_shared<Scene>(true);
+	_scene->debug(true);
+	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/box.fbx");
+//	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/tank_test_ani.fbx");
+//	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/container.fbx");
+	_scene->shaders(shader, plainShader, colorShader);
+	_scene->scale(0.003f);
+/*
 	auto gun = std::make_shared<ComplexObject>();
-	gun->load("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx");
+	gun->load("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx", 0.01f);
 	gun->setShader(shader);
-	gun->translate(glm::vec3(0.0f, 0.3f, 0.0f));
-	gun->scale(0.01f);
+	gun->translate(glm::vec3(0.088f, 0.376999f, -0.22f));
 	gun->rotate(90.f, glm::vec3(1.f, 0.f, 0.f));
-
-	_scene->add(gun);
+	gun->follow(camera);
+*/
+	//_scene->add(gun);
 
 	auto idx = _scene->add(camera);
 
 	createLights();
-	generateCubes();
-	generateContainer();
+//	generateCubes();
+//	generateContainer();
 	generateGround();
 	generateDome();
 
 	_scene->prepare();
 	_scene->setCurrentCamera(idx);
 
-	_currentObject = gun;
+//	_currentObject = gun;
 
 	setCamera(camera);
   }
@@ -158,7 +174,7 @@ public:
 	});
 
 	auto spot_light = std::make_shared<SpotLight>(
-		SpotLightInput{.tracking = _scene->currentCamera(),
+		SpotLightInput{.follow = _scene->currentCamera(),
 			.ambient = glm::vec3(0.0f, 0.0f, 0.0f),
 			.diffuse = glm::vec3(1.0f, 1.0f, 1.0f),
 			.specular = glm::vec3(1.0f, 1.0f, 1.0f),
@@ -178,7 +194,7 @@ public:
 
   void generateCubes() {
 	glm::vec3 cubePositions[] = {
-		glm::vec3(14.0f, 1.0f, 0.0f), glm::vec3(12.0f, 1.0f, -15.0f),
+		glm::vec3(0.0f, 1.0f, -5.0f), glm::vec3(0.0f, 1.0f, -10.0f),
 		glm::vec3(-3.0f, 1.0f, -5.0f), glm::vec3(-13.8f, 1.0f, -12.3f),
 		glm::vec3(9.4f, 1.f, -7.0f), glm::vec3(-10.7f, 1.0f, -7.5f),
 		glm::vec3(4.3f, 1.0f, -5.0f), glm::vec3(8.5f, 1.0f, -12.5f),
@@ -186,7 +202,7 @@ public:
 
 	int nr = 0;
 	for (auto pos : cubePositions) {
-	  float size = 0.1f*((float)(rand()%6) + 0.1f);
+	  float size = 0.2f*((float)(rand()%6) + 0.2f);
 	  auto mat = glm::mat4(1.0f);
 	  auto material = Material{.shininess = (float)(rand()%80)};
 
@@ -212,36 +228,33 @@ public:
 										   .shader = shader,
 										   .textures = {texture3},
 										   .material = material,
-										   .size = 25.f,
+										   .size = 50.f,
 										   .name = "Ground"}));
   }
 
   void generateContainer() {
 
 	_scene->add(ObjectGenerator::container({
-											   .position = glm::vec3(2.0f, 0.5f, 5.0f),
+											   .position = glm::vec3(3.5f, 1.0f, 5.0f),
 											   .shader = shader,
 											   .textures = {texture1},
 											   .material = Material{.shininess = (float)(rand()%80)},
-											   .size = 0.5f,
 											   .mass = 10000.f,
 										   }));
 
 	_scene->add(ObjectGenerator::container({
-											   .position = glm::vec3(-1.0f, 0.5f, 5.0f),
+											   .position = glm::vec3(-3.0f, 1.0f, 5.0f),
 											   .shader = shader,
 											   .textures = {texture1},
 											   .material = Material{.shininess = (float)(rand()%80)},
-											   .size = 0.5f,
 											   .mass = 10000.f,
 										   }));
 
 	_scene->add(ObjectGenerator::container({
-											   .position = glm::vec3(1.0f, 1.5f, 5.0f),
+											   .position = glm::vec3(1.0f, 3.0f, 5.0f),
 											   .shader = shader,
 											   .textures = {texture1},
 											   .material = Material{.shininess = (float)(rand()%80)},
-											   .size = 0.5f,
 											   .mass = 10000.f,
 										   }));
 
@@ -273,10 +286,18 @@ public:
 	  if (state==KEY_STATE_DOWN && _currentObject)
 		_currentObject->translate(glm::vec3(0.0f, 0.0f, -0.1f));
 	  break;
+	case KEY_I:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->rotate(1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+	  break;
+	case KEY_O:
+	  if (state==KEY_STATE_DOWN && _currentObject)
+		_currentObject->rotate(-1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+	  break;
 	case KEY_P:
 	  if (state==KEY_STATE_DOWN && _currentObject) {
-		auto position = _currentObject->entityPosition();
-		std::cout << "Position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
+		auto model = _currentObject->entityModel();
+		std::cout << "Model: " << glm::to_string(model) << std::endl;
 	  }
 	  break;
 	case KEY_ESCAPE:
@@ -318,6 +339,9 @@ private:
   std::shared_ptr<Shader> skyShader;
   std::shared_ptr<Shader> shader;
   std::shared_ptr<Shader> plainShader;
+  std::shared_ptr<Shader> colorShader;
+
+  std::shared_ptr<Texture> debugTexture;
 
   std::shared_ptr<Texture> texture1;
   std::shared_ptr<Texture> texture2;

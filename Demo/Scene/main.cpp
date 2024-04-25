@@ -1,13 +1,13 @@
 #include <iostream>
 #include <iso646.h>
 
-#include <geometry/Point3.h>
 #include <render/Window.h>
 #include <system/System.h>
 #include <render/Camera.h>
 #include <render/Shader.h>
 #include <render/Material.h>
 #include <render/Texture.h>
+#include <render/OpenGLRender.h>
 #include <geometry/Object.h>
 
 #include <render/DirectionalLight.h>
@@ -98,7 +98,7 @@ public:
 	});
 
 	auto spot_light = std::make_shared<SpotLight>(
-		SpotLightInput{.tracking = camera,
+		SpotLightInput{.follow = camera,
 			.ambient = glm::vec3(0.0f, 0.0f, 0.0f),
 			.diffuse = glm::vec3(1.0f, 1.0f, 1.0f),
 			.specular = glm::vec3(1.0f, 1.0f, 1.0f),
@@ -158,9 +158,8 @@ public:
   }
 
   bool render() {
-	for (auto object : object_list_) {
-	  object->render(camera);
-	}
+	for (auto object : object_list_)
+	  OpenGLRender::instance()->render(object);
 	return Window::render();
   }
 

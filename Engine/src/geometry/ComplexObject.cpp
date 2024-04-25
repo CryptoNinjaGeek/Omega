@@ -14,31 +14,17 @@ using namespace omega::render;
 using namespace omega::utils;
 using namespace omega::interface;
 
-ComplexObject::ComplexObject() {
+ComplexObject::ComplexObject(bool debug) : debug_(debug) {
+  data_->type_ = ObjectType::ComplexObject;
 }
 
-void ComplexObject::load(string const &path) {
-  _root = Loader::loadModel(path);
+void ComplexObject::load(string const &path, double scale) {
+  _root = Loader::loadModel({
+								.path = path,
+								.scale = scale,
+								.debug = debug_
+							});
   _root->mat = glm::mat4(1.0f);
-}
-
-void ComplexObject::render(std::shared_ptr<render::Camera> camera, glm::mat4 mat) {
-  if (_root)
-	render(_root, _root->mat, camera);
-}
-
-void ComplexObject::render(ObjectNodePtr node, glm::mat4 mat, std::shared_ptr<render::Camera> camera) {
-  if (node==nullptr)
-	return;
-
-  for (auto object : node->meshes) {
-	object->render(camera, mat);
-  }
-
-  for (auto child : node->children) {
-	auto changed_mat = mat*child->mat;
-	render(child, changed_mat, camera);
-  }
 }
 
 auto ComplexObject::process() -> void {
@@ -104,8 +90,8 @@ auto ComplexObject::translate(glm::vec3 pos) -> void {
   _root->mat = glm::translate(_root->mat, pos);
 }
 
-glm::vec3 ComplexObject::entityPosition() {
+auto ComplexObject::entityModel() -> glm::mat4 {
   if (_root==nullptr)
-	return Entity::entityPosition();
-  return glm::vec3(_root->mat[3]);
+	return Entity::entityModel();
+  return _root->mat;
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include  <system/Global.h>
-#include <reactphysics3d/reactphysics3d.h>
+#include  "system/Global.h"
+#include <geometry/BoundingBox.h>
 
 namespace omega {
 namespace physics {
@@ -13,15 +13,15 @@ enum class ColliderType {
 };
 
 enum class BodyType {
-  STATIC = (int)reactphysics3d::BodyType::STATIC,
-  KINEMATIC = (int)reactphysics3d::BodyType::KINEMATIC,
-  DYNAMIC = (int)reactphysics3d::BodyType::DYNAMIC
+  STATIC,
+  KINEMATIC,
+  DYNAMIC
 };
 
-struct PhysicsObject {
+struct PhysicsObjectInput {
   BodyType bodyType{BodyType::STATIC};
   ColliderType colliderType{ColliderType::BOX};
-  glm::vec3 boundingBox{1.0f, 1.0f, 1.0f};
+  geometry::BoundingBox boundingBox;
   float mass{1.0};
   float bounciness{0.5};
   float frictionCoefficient{0.3};

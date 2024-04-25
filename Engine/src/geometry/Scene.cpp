@@ -9,38 +9,56 @@
 #include <system/TextureManager.h>
 #include <utils/Loader.h>
 #include <render/Camera.h>
+#include <render/OpenGLRender.h>
 
 using namespace std;
 using namespace omega::render;
 using namespace omega::system;
 using namespace omega::interface;
 using namespace omega::utils;
+using namespace omega::physics;
 
-Scene::Scene(bool gamma) : gammaCorrection(gamma) {
-  physics_world_ = physics_common_.createPhysicsWorld();
-  physics_world_->setGravity(reactphysics3d::Vector3(0, -9.81f, 0));
+Scene::Scene(bool physics, bool gamma) : gammaCorrection_(gamma), physics_(physics) {
+  if(physics_){
+	auto engine = PhysicsEngine::instance();
+	engine->enabled(true);
+	engine->gravity(glm::vec3(0, -9.81f, 0));
+  }
 }
 
-Scene::Scene(std::string const &path, bool gamma) : gammaCorrection(gamma) {
-  physics_world_ = physics_common_.createPhysicsWorld();
-
-  auto gravity = physics_world_->getGravity();
-  std::cout << "Gravity: " << gravity.x << " " << gravity.y << " " << gravity.z
-			<< std::endl;
-
+Scene::Scene(std::string const &path, bool physics, bool gamma) : gammaCorrection_(gamma) , physics_(physics) {
+  if(physics_){
+	auto gravity =PhysicsEngine::instance()->gravity();
+	std::cout << "Gravity: " << gravity.x << " " << gravity.y << " " << gravity.z
+			  << std::endl;
+  }
   loadModel(path);
 }
 
 auto Scene::import(std::string const &path) -> void {
-loadModel(path);
-if(meshShader_ && lightShader_)
-shaders(meshShader_, lightShader_);
+  loadModel(path);
+  if(meshShader_ && lightShader_)
+	  shaders(meshShader_, lightShader_, debugShader_);
 }
 
 auto Scene::debug(bool val) -> void {
   debug_ = val;
 
-  physics_world_->setIsDebugRenderingEnabled(debug_);
+  if(PhysicsEngine::instance()->enabled()){
+	auto texture = std::make_shared<Texture>();
+	texture->load("/Users/cta/Development/personal/Omega/Demo/Resources/textures/aabb.png");
+
+	aabb_ = ObjectGenerator::box({.matrix = glm::mat4(1.0f),
+								  .shader = debugShader_,
+								  .textures = {texture},
+								  .size = 0.5f,
+								  .mass = 1.0f,
+								  .name = "AABB_CUBE",
+								  .physics = false,
+								  .lighting = false});
+  } else {
+	aabb_->visible(false);
+  }
 }
 
 auto Scene::add(std::shared_ptr<ObjectInterface> object) -> void
@@ -52,15 +70,20 @@ auto Scene::add(std::shared_ptr<ObjectInterface> object) -> void
 }
 
 void Scene::loadModel(string const &path) {
-  auto tree = Loader::loadModel(path);
+  auto tree = Loader::loadModel({
+	.path = path,
+	.debug = debug_,
+  });
 
   add(tree);
 }
 
 auto Scene::add(std::shared_ptr<ObjectNode> tree) ->void
 {
-  if(_root ==nullptr)
+  if(_root ==nullptr){
 	_root = std::make_shared<ObjectNode>();
+	_root->mat = glm::mat4(1.0f);
+  }
 
   _root->children.push_back(tree);
 }
@@ -76,8 +99,7 @@ auto Scene::prepare(ObjectNodePtr node) -> void {
   for (auto object : node->meshes) {
 	object->prepare({
 	  .lights = lights_,
-	  .physics_world = physics_world_,
-	  .physics_common = &physics_common_,
+	  .model = node->mat,
 	});
   }
 
@@ -91,42 +113,50 @@ void Scene::render() {
 
 // draws the model, and thus all its meshes
 void Scene::render(std::shared_ptr<render::Camera> camera) {
-  render(_root, camera);
+  render(_root, camera, _root->mat);
 
   for (auto light : lights_)
-	light->render(camera, lightShader_);
+	OpenGLRender::instance()->render(light,lightShader_);
 
-  if (debug_) {
-	reactphysics3d::DebugRenderer &debugRenderer = physics_world_->getDebugRenderer();
-	auto lines = debugRenderer.getLines();
-
-	for (auto line : lines) {
-	  std::cout << "Line: " << line.point1.x << " " << line.point1.y << " "
-				<< line.point1.z << " " << line.point2.x << " " << line.point2.y
-				<< " " << line.point2.z << std::endl;
+  auto engine = PhysicsEngine::instance();
+  if (debug_ && engine->enabled()) {
+	for( unsigned int no = 0 ; no < engine->getNbBodies(); no++ ) {
+	  auto body = engine->body(no);
+	  OpenGLRender::instance()->render(body->aabb());
 	}
   }
-}
+ }
 
-void Scene::render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera) {
+void Scene::render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera, glm::mat4 mat) {
   if (node == nullptr)
 	return;
 
+  auto ogl_render = OpenGLRender::instance();
+
   for (auto object : node->meshes) {
-	object->render(camera);
+	ogl_render->push(mat);
+	ogl_render->render(object);
+	ogl_render->pop();
   }
 
-  for (auto child : node->children)
-	render(child, camera);
+  for (auto child : node->children){
+	auto changed_mat = mat*child->mat;
+	render(child, camera, changed_mat);
+  }
 }
 
 // draws the model, and thus all its meshes
 void Scene::shaders(std::shared_ptr<render::Shader> shader,
-					std::shared_ptr<render::Shader> lightShader) {
+					std::shared_ptr<render::Shader> lightShader,
+					std::shared_ptr<render::Shader> debugShader) {
   shaders(shader, _root);
 
-  meshShader_ = shader;
-  lightShader_ = lightShader;
+  if(aabb_)
+	aabb_->setShader(debugShader);
+
+  debugShader_	= debugShader;
+  meshShader_ 	= shader;
+  lightShader_ 	= lightShader;
 }
 
 void Scene::shaders(std::shared_ptr<render::Shader> shader, ObjectNodePtr node) {
@@ -191,17 +221,11 @@ auto Scene::scale(float scale) -> void {
 }
 
 auto Scene::process(float deltaTime) -> void {
-  if (debug_) {
-	reactphysics3d::DebugRenderer &debugRenderer = physics_world_->getDebugRenderer();
-
-	debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::COLLIDER_AABB, true);
-	debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::CONTACT_POINT, true);
-	debugRenderer.setIsDebugItemDisplayed(reactphysics3d::DebugRenderer::DebugItem::CONTACT_NORMAL, true);
-  }
-
   if (deltaTime==0)
 	deltaTime = 0.000001f;
-  physics_world_->update(deltaTime);
+
+  if(PhysicsEngine::instance()->enabled())
+	PhysicsEngine::instance()->update(deltaTime);
 
   process(_root);
 }
@@ -221,7 +245,11 @@ auto Scene::process(ObjectNodePtr node) -> void {
 auto Scene::setCurrentCamera(unsigned int index) -> void {
   auto camera = cameras_[index];
 
-  camera->setupPhysics(physics_world_, &physics_common_);
+  if(OpenGLRender::instance())
+	OpenGLRender::instance()->camera(camera);
+
+  if(PhysicsEngine::instance()->enabled())
+	  camera->setupPhysics();
 
   current_camera_ = index;
 }

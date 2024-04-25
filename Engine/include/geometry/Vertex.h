@@ -1,9 +1,6 @@
 #pragma once
 
 #include <geometry/Math.h>
-#include <geometry/Point3.h>
-#include <geometry/Point2.h>
-#include <geometry/Matrix.h>
 #include <geometry/Sphere.h>
 #include <geometry/BoxBase.h>
 

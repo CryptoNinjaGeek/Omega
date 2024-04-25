@@ -18,7 +18,7 @@
 #include <utils/ObjectGenerator.h>
 #include <geometry/Object.h>
 
-#include <reactphysics3d/reactphysics3d.h>
+#include "physics/PhysicsEngine.h"
 
 #include <string>
 #include <fstream>
@@ -48,7 +48,6 @@ public:
   auto import(std::string const &path) -> void;
 
   void render(std::shared_ptr<render::Camera>);
-  auto setupPhysics(reactphysics3d::PhysicsWorld *, reactphysics3d::PhysicsCommon *) -> void;
   auto process() -> void;
 
 protected:

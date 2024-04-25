@@ -60,7 +60,7 @@ auto ObjectGenerator::plane(input::ObjectGenerator input)
   object->physics({
 					  .bodyType = physics::BodyType::STATIC,
 					  .colliderType = physics::ColliderType::PLANE,
-					  .boundingBox = glm::vec3(input.size, 0.01f, input.size),
+					  .boundingBox = {-input.size, -0.01f, -input.size, input.size, 0.01f, input.size},
 				  });
 
   return object;

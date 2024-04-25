@@ -100,7 +100,7 @@ auto ObjectGenerator::container(input::ObjectGenerator input)
   object->physics({
 					  .bodyType = physics::BodyType::STATIC,
 					  .colliderType = physics::ColliderType::BOX,
-					  .boundingBox = glm::vec3(containerSizeX, containerSizeY, containerSizeZ),
+					  .boundingBox = {-containerSizeX, -containerSizeY, -containerSizeZ, containerSizeX, containerSizeY, containerSizeZ},
 					  .mass = input.mass,
 					  .bounciness = 0.0f,
 				  });

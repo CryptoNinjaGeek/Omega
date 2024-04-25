@@ -371,10 +371,6 @@ bool Window::initGL() {
 	return -1;
   }
 
-  GLfloat vertices[] = {-0.5f, -0.5f*float(sqrt(3))/3, 0.0f,
-	  0.5f, -0.5f*float(sqrt(3))/3, 0.0f,
-	  0.0f, 0.5f*float(sqrt(3))*2/3, 0.0f};
-
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -416,7 +412,7 @@ bool Window::initGL() {
   glViewport(0, 0, m_width, m_height);
 
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
+//  glEnable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <geometry/Point3.h>
 #include <geometry/Math.h>
+#include <geometry/BoundingBox.h>
+#include <glm/glm.hpp>
 
 namespace omega {
 namespace geometry {
@@ -12,173 +13,141 @@ enum class PlaneSide {
   Back = -1
 };
 
-template<class T>
-class Plane : public Point3<T> {
+class Plane {
 public:
-  T x;
-  T y;
-  T z;
-  T d;
+  glm::vec4 data;
 
   Plane();
 
-  Plane(const Point3<T> &p, const Point3<T> &n);
+  Plane(const BoundingBox &p, const glm::vec3 &n);
 
-  Plane(T _x, T _y, T _z, T _d);
+  Plane(float _x, float _y, float _z, float _d);
 
-  Plane(const Point3<T> &j, const Point3<T> &k, const Point3<T> &l);
+  Plane(const glm::vec3 &j, const glm::vec3 &k, const glm::vec3 &l);
 
-  void set(const T _x, const T _y, const T _z);
+  Plane(const glm::vec3 &p, const glm::vec3 &n);
 
-  void set(const Point3<T> &p, const Point3<T> &n);
+  void set(const float _x, const float _y, const float _z);
 
-  void set(const Point3<T> &k, const Point3<T> &j, const Point3<T> &l);
+  void set(const glm::vec3 &p, const glm::vec3 &n);
 
-  void setPoint(const Point3<T> &p);
+  void set(const glm::vec3 &k, const glm::vec3 &j, const glm::vec3 &l);
 
-  void setXY(T zz);
+  void setPoint(const glm::vec3 &p);
 
-  void setYZ(T xx);
+  void setXY(float zz);
 
-  void setXZ(T yy);
+  void setYZ(float xx);
 
-  void setXY(const Point3<T> &P, T dir);
+  void setXZ(float yy);
 
-  void setYZ(const Point3<T> &P, T dir);
+  void setXY(const glm::vec3 &P, float dir);
 
-  void setXZ(const Point3<T> &P, T dir);
+  void setYZ(const glm::vec3 &P, float dir);
 
-  void shiftX(T xx);
+  void setXZ(const glm::vec3 &P, float dir);
 
-  void shiftY(T yy);
+  void shiftX(float xx);
 
-  void shiftZ(T zz);
+  void shiftY(float yy);
+
+  void shiftZ(float zz);
 
   void invert();
 
   void neg();
 
-  Point3<T> project(const Point3<T> &pt) const;
+  glm::vec3 project(const glm::vec3 &pt) const;
 
-  T distTPlane(const Point3<T> &cp) const;
+  float distTPlane(const glm::vec3 &cp) const;
 
-  PlaneSide whichSide(const Point3<T> &cp) const;
+  PlaneSide whichSide(const glm::vec3 &cp) const;
 
-  T intersect(const Point3<T> &start, const Point3<T> &end) const;
+  float intersect(const glm::vec3 &start, const glm::vec3 &end) const;
 
   bool isHorizontal() const;
 
   bool isVertical() const;
 
-  PlaneSide whichSideBox(const Point3<T> &center,
-						 const Point3<T> &axisx,
-						 const Point3<T> &axisy,
-						 const Point3<T> &axisz) const;
+  PlaneSide whichSideBox(const glm::vec3 &center,
+						 const glm::vec3 &axisx,
+						 const glm::vec3 &axisy,
+						 const glm::vec3 &axisz) const;
 };
 
-template<class T>
-inline Plane<T>::Plane() {
+inline Plane::Plane() {
 }
 
-template<class T>
-inline Plane<T>::Plane(T _x, T _y, T _z, T _d) {
-  x = _x;
-  y = _y;
-  z = _z;
-  d = _d;
+inline Plane::Plane(float _x, float _y, float _z, float _d) {
+  data = glm::vec4(_x, _y, _z, _d);
 }
 
-template<class T>
-inline Plane<T>::Plane(const Point3<T> &p, const Point3<T> &n) {
+inline Plane::Plane(const glm::vec3 &p, const glm::vec3 &n) {
   set(p, n);
 }
 
-template<class T>
-inline Plane<T>::Plane(const Point3<T> &j, const Point3<T> &k, const Point3<T> &l) {
+inline Plane::Plane(const glm::vec3 &j, const glm::vec3 &k, const glm::vec3 &l) {
   set(j, k, l);
 }
 
-template<class T>
-inline void Plane<T>::setXY(T zz) {
-  x = y = 0;
-  z = 1;
-  d = -zz;
+inline void Plane::setXY(float zz) {
+  data = glm::vec4(0, 0, 1, -zz);
 }
 
-template<class T>
-inline void Plane<T>::setYZ(T xx) {
-  x = 1;
-  z = y = 0;
-  d = -xx;
+inline void Plane::setYZ(float xx) {
+  data = glm::vec4(1, 0, 0, -xx);
 }
 
-template<class T>
-inline void Plane<T>::setXZ(T yy) {
-  x = z = 0;
-  y = 1;
-  d = -yy;
+inline void Plane::setXZ(float yy) {
+  data = glm::vec4(0, 1, 0, -yy);
 }
 
-template<class T>
-inline void Plane<T>::setXY(const Point3<T> &point, T dir)       // Normal = (0, 0, -1|1)
+inline void Plane::setXY(const glm::vec3 &point, float dir)       // Normal = (0, 0, -1|1)
 {
-  x = y = 0;
-  d = -((z = dir)*point.z);
+  data = glm::vec4(0, 0, dir, -dir*point.z);
 }
 
-template<class T>
-inline void Plane<T>::setYZ(const Point3<T> &point, T dir)       // Normal = (-1|1, 0, 0)
+inline void Plane::setYZ(const glm::vec3 &point, float dir)       // Normal = (-1|1, 0, 0)
 {
-  z = y = 0;
-  d = -((x = dir)*point.x);
+  data = glm::vec4(dir, 0, 0, -dir*point.x);
 }
 
-template<class T>
-inline void Plane<T>::setXZ(const Point3<T> &point, T dir)       // Normal = (0, -1|1, 0)
+inline void Plane::setXZ(const glm::vec3 &point, float dir)       // Normal = (0, -1|1, 0)
 {
-  x = z = 0;
-  d = -((y = dir)*point.y);
+  data = glm::vec4(0, dir, 0, -dir*point.y);
 }
 
-template<class T>
-inline void Plane<T>::shiftX(T xx) {
-  d -= xx*x;
+inline void Plane::shiftX(float xx) {
+  data.w -= xx*data.x;
 }
 
-template<class T>
-inline void Plane<T>::shiftY(T yy) {
-  d -= yy*y;
+inline void Plane::shiftY(float yy) {
+  data.w -= yy*data.y;
 }
 
-template<class T>
-inline void Plane<T>::shiftZ(T zz) {
-  d -= zz*z;
+inline void Plane::shiftZ(float zz) {
+  data.w -= zz*data.z;
 }
 
-template<class T>
-inline bool Plane<T>::isHorizontal() const {
-  return (x==0 && y==0) ? true : false;
+inline bool Plane::isHorizontal() const {
+  return (data.x==0 && data.y==0) ? true : false;
 }
 
-template<class T>
-inline bool Plane<T>::isVertical() const {
-  return ((x!=0 || y!=0) && z==0) ? true : false;
+inline bool Plane::isVertical() const {
+  return ((data.x!=0 || data.y!=0) && data.z==0) ? true : false;
 }
 
-template<class T>
-inline Point3<T> Plane<T>::project(const Point3<T> &pt) const {
-  T dist = distTPlane(pt);
-  return Point3<T>(pt.x - x*dist, pt.y - y*dist, pt.z - z*dist);
+inline glm::vec3 Plane::project(const glm::vec3 &pt) const {
+  float dist = distTPlane(pt);
+  return glm::vec3(pt.x - data.x*dist, pt.y - data.y*dist, pt.z - data.z*dist);
 }
 
-template<class T>
-inline T Plane<T>::distTPlane(const Point3<T> &cp) const {
-  return (x*cp.x + y*cp.y + z*cp.z) + d;
+inline float Plane::distTPlane(const glm::vec3 &cp) const {
+  return (data.x*cp.x + data.y*cp.y + data.z*cp.z) + data.w;
 }
 
-template<class T>
-inline PlaneSide Plane<T>::whichSide(const Point3<T> &cp) const {
-  T dist = distTPlane(cp);
+inline PlaneSide Plane::whichSide(const glm::vec3 &cp) const {
+  float dist = distTPlane(cp);
   if (dist >= 0.005f)                 // if (mFabs(dist) < 0.005f)
 	return PlaneSide::Front;                    //    return On;
   else if (dist <= -0.005f)           // else if (dist > 0.0f)
@@ -187,86 +156,77 @@ inline PlaneSide Plane<T>::whichSide(const Point3<T> &cp) const {
 	return PlaneSide::On;                       //    return Back;
 }
 
-template<class T>
-inline void Plane<T>::set(const T _x, const T _y, const T _z) {
-  Point3<T>::set(_x, _y, _z);
+inline void Plane::set(const float _x, const float _y, const float _z) {
+  data = glm::vec4(_x, _y, _z, 0.f);
 }
 
-template<class T>
-inline void Plane<T>::setPoint(const Point3<T> &p) {
-  d = -(p.x*x + p.y*y + p.z*z);
+inline void Plane::setPoint(const glm::vec3 &p) {
+  data.w = -(p.x*data.x + p.y*data.y + p.z*data.z);
 }
 
-template<class T>
-inline void Plane<T>::set(const Point3<T> &p, const Point3<T> &n) {
-  x = n.x;
-  y = n.y;
-  z = n.z;
+inline void Plane::set(const glm::vec3 &p, const glm::vec3 &n) {
+  data.x = n.x;
+  data.y = n.y;
+  data.z = n.z;
 
-  this->normalize();
+  data = glm::normalize(data);
 
-  d = -(p.x*x + p.y*y + p.z*z);
+  data.w = -(p.x*data.x + p.y*data.y + p.z*data.z);
 }
 
-template<class T>
-inline void Plane<T>::set(const Point3<T> &k, const Point3<T> &j, const Point3<T> &l) {
-  T ax = k.x - j.x;
-  T ay = k.y - j.y;
-  T az = k.z - j.z;
-  T bx = l.x - j.x;
-  T by = l.y - j.y;
-  T bz = l.z - j.z;
-  x = ay*bz - az*by;
-  y = az*bx - ax*bz;
-  z = ax*by - ay*bx;
-  T squared = x*x + y*y + z*z;
+inline void Plane::set(const glm::vec3 &k, const glm::vec3 &j, const glm::vec3 &l) {
+  float ax = k.x - j.x;
+  float ay = k.y - j.y;
+  float az = k.z - j.z;
+  float bx = l.x - j.x;
+  float by = l.y - j.y;
+  float bz = l.z - j.z;
+
+  data.x = ay*bz - az*by;
+  data.y = az*bx - ax*bz;
+  data.z = ax*by - ay*bx;
+
+  float squared = data.x*data.x + data.y*data.y + data.z*data.z;
 
   // In non-debug mode
   if (squared!=0) {
-	T invSqrt = 1.0/(T)mSqrtD(x*x + y*y + z*z);
-	x *= invSqrt;
-	y *= invSqrt;
-	z *= invSqrt;
-	d = -(j.x*x + j.y*y + j.z*z);
+	float invSqrt = 1.0/(float)glm::distance2(data, data);
+	data.x *= invSqrt;
+	data.y *= invSqrt;
+	data.z *= invSqrt;
+	data.w = -(j.x*data.x + j.y*data.y + j.z*data.z);
   } else {
-	x = 0;
-	y = 0;
-	z = 1;
-	d = -(j.x*x + j.y*y + j.z*z);
+	data.x = 0;
+	data.y = 0;
+	data.z = 1;
+	data.w = -(j.x*data.x + j.y*data.y + j.z*data.z);
   }
 }
 
-template<class T>
-inline void Plane<T>::invert() {
-  x = -x;
-  y = -y;
-  z = -z;
-  d = -d;
+inline void Plane::invert() {
+  data = glm::vec4(-data.x, -data.y, -data.z, -data.w);
 }
 
-template<class T>
-inline void Plane<T>::neg() {
+inline void Plane::neg() {
   invert();
 }
 
-template<class T>
-inline T Plane<T>::intersect(const Point3<T> &p1, const Point3<T> &p2) const {
-  T den = mDot(p2 - p1, *this);
+inline float Plane::intersect(const glm::vec3 &p1, const glm::vec3 &p2) const {
+  float den = glm::dot(p2 - p1, glm::vec3(data));
   if (den==0)
 	return PARALLEL_PLANE;
   return -distTPlane(p1)/den;
 }
 
-template<class T>
-inline PlaneSide Plane<T>::whichSideBox(const Point3<T> &center,
-										const Point3<T> &axisx,
-										const Point3<T> &axisy,
-										const Point3<T> &axisz) const {
-  T baseDist = distTPlane(center);
+inline PlaneSide Plane::whichSideBox(const glm::vec3 &center,
+									 const glm::vec3 &axisx,
+									 const glm::vec3 &axisy,
+									 const glm::vec3 &axisz) const {
+  float baseDist = distTPlane(center);
 
-  T compDist = mFabs(mDot(axisx, *this)) +
-	  mFabs(mDot(axisy, *this)) +
-	  mFabs(mDot(axisz, *this));
+  float compDist = mFabs(glm::dot(axisx, glm::vec3(data))) +
+	  mFabs(glm::dot(axisy, glm::vec3(data))) +
+	  mFabs(glm::dot(axisz, glm::vec3(data)));
 
   // Intersects
   if (baseDist >= compDist)

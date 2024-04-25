@@ -3,7 +3,7 @@
 #include <render/CubeTexture.h>
 #include <geometry/SkyBox.h>
 #include <geometry/Object.h>
-
+#include <utils/utils.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -15,7 +15,7 @@ auto ObjectGenerator::mesh(input::MeshInput input)
 -> std::shared_ptr<omega::geometry::Object> {
   unsigned int VBO, EBO;
   unsigned int VAO;
-  
+
   if (input.flags & ogMirrorUV)
 	mirrorUV(input.vertices);
 
@@ -61,12 +61,47 @@ auto ObjectGenerator::mesh(input::MeshInput input)
   glBindVertexArray(0);
 
   auto object = std::make_shared<Object>(VAO, VBO, input.indices.size(),
-										 ObjectType::Elements);
-  object->setName(input.name);
+										 RenderType::Elements);
 
   for (const auto &[key, value] : input.textures) {
 	object->addTexture(value);
   }
+
+  object->setName(input.name);
+
+  auto list = split(input.name, {'_', ' ', '.'});
+  for (auto item : list) {
+	auto list2 = split(item, {':'});
+	if (list2.size() > 1) {
+	  if (list2[0]=="n")
+		object->setName(list2[1]);
+	  else if (list2[0]=="b") {
+		physics::BodyType bodyType{physics::BodyType::STATIC};
+		physics::ColliderType colliderType{physics::ColliderType::BOX};
+		auto boundingBox = utils::bounding_box(input.vertices);
+
+		if (list2[1]=="b")
+		  colliderType = physics::ColliderType::BOX;
+		else if (list2[1]=="s")
+		  colliderType = physics::ColliderType::SPHERE;
+		else if (list2[1]=="p")
+		  colliderType = physics::ColliderType::PLANE;
+
+		if (list2.size() > 2) {
+		  if (list2[2]=="d")
+			bodyType = physics::BodyType::DYNAMIC;
+		  else if (list2[2]=="s")
+			bodyType = physics::BodyType::STATIC;
+		}
+
+		object->physics({
+							.bodyType = bodyType,
+							.colliderType = colliderType,
+							.boundingBox = boundingBox
+						});
+	  }
+	}
+  };
 
   return object;
 }

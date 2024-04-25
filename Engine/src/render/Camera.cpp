@@ -1,7 +1,7 @@
 #include <render/Camera.h>
 
 #include "glm/ext.hpp"
-#include <reactphysics3d/reactphysics3d.h>
+#include "physics/PhysicsEngine.h"
 
 using namespace omega::render;
 
@@ -32,11 +32,11 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 }
 
 auto Camera::updateShader() -> void {
-  if (body_) {
-	auto transform = body_->getTransform();
-	position_ = glm::vec3(transform.getPosition().x, transform.getPosition().y,
-						  transform.getPosition().z);
-  }
+  if (physicsObject_)
+	position_ = physicsObject_->worldCenter() + glm::vec3(0, eye_adjustment_, 0);
+
+  std::cout << "Camera position: " << glm::to_string(position_) << std::endl;
+
   if (shader_) {
 	shader_->use();
 
@@ -148,26 +148,25 @@ void Camera::updateCameraVectors() {
   up_ = glm::normalize(glm::cross(right_, front_));
 }
 
-auto Camera::setupPhysics(reactphysics3d::PhysicsWorld *world,
-						  reactphysics3d::PhysicsCommon *physicsCommon) -> void {
+auto Camera::setupPhysics(glm::mat4) -> void {
 
   auto height = position_.y*1.1f;
-  auto eyeAdjust = position_.y - (height/2.f);
 
-  reactphysics3d::Transform transform = reactphysics3d::Transform::identity();
-  transform.setPosition(reactphysics3d::Vector3(position_.x, eyeAdjust, position_.z));
+  eye_adjustment_ = position_.y - (height/2.f);
 
-  body_ = world->createRigidBody(transform);
-  body_->setType(reactphysics3d::BodyType::DYNAMIC);
-  body_->setAngularDamping(0.3);
-  body_->setLinearDamping(1.0f);
+  physics({
+			  .bodyType = physics::BodyType::DYNAMIC,
+			  .colliderType = physics::ColliderType::BOX,
+			  .boundingBox = {-0.5f, 0.0f, -0.5f,
+				  0.5f, height, 0.5f},
+			  .mass = 1.0f,
+			  .bounciness = 0.f
+		  });
+}
 
-  transform = reactphysics3d::Transform::identity();
-  auto shape = physicsCommon
-	  ->createSphereShape(height/2.f);
-  collider_ = body_->addCollider(shape, transform);
-
-  reactphysics3d::Material &material = collider_->getMaterial();
-  material.setBounciness(0.f);
+glm::mat4 Camera::entityModel() {
+  auto model = glm::mat4(1.0f);
+  model = glm::translate(model, position_);
+  return model;
 }
 
