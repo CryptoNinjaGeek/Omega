@@ -15,6 +15,7 @@ set_target_properties(Basic PROPERTIES
 		CXX_STANDARD_REQUIRED YES
 		CXX_EXTENSIONS NO
 		FOLDER "Demo"
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
 )
 
 include_directories(Basic PUBLIC

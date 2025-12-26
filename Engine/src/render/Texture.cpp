@@ -9,7 +9,7 @@ using namespace omega::render;
 
 Texture::Texture() {}
 
-auto Texture::loadImageData(std::string fileName, bool flip, std::string name) -> ImageInfo {
+auto Texture::loadImageData(const std::string& fileName, bool flip, const std::string& name) -> ImageInfo {
   int width, height, nrChannels;
   stbi_set_flip_vertically_on_load(flip);
   auto bytes = fs::instance()->data(fileName);
@@ -21,7 +21,7 @@ auto Texture::loadImageData(std::string fileName, bool flip, std::string name) -
 	  .data = data, .width = width, .height = height, .channels = nrChannels};
 }
 
-bool Texture::load(std::string fileName, std::string name) {
+bool Texture::load(const std::string& fileName, const std::string& name) {
   glGenTextures(1, &m_textureId);
   glBindTexture(GL_TEXTURE_2D, m_textureId);
   // set the texture wrapping parameters
@@ -51,7 +51,7 @@ bool Texture::load(std::string fileName, std::string name) {
   } else {
 	std::cout << "Failed to load texture: " << fileName << std::endl;
   }
-  free(imageInfo.data);
+  stbi_image_free(imageInfo.data);
   return true;
 }
 

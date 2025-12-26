@@ -1,4 +1,9 @@
 #include <iostream>
+#include <filesystem>
+#include <vector>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #include <geometry/Point3.h>
 #include <render/Window.h>
@@ -28,16 +33,35 @@ using namespace omega;
 class MainWindow : public Window {
 public:
   MainWindow() : Window() {
-
-	fs::instance()->add(
-		"/Users/cta/Development/personal/Omega/Demo/resources.zip");
+	// Get the executable directory
+	std::filesystem::path exePath;
+	#ifdef __APPLE__
+		// On macOS, use _NSGetExecutablePath
+		uint32_t size = 0;
+		_NSGetExecutablePath(nullptr, &size);
+		std::vector<char> path(size);
+		_NSGetExecutablePath(path.data(), &size);
+		exePath = std::filesystem::canonical(path.data()).parent_path();
+	#else
+		// On Linux, use /proc/self/exe
+		exePath = std::filesystem::canonical("/proc/self/exe").parent_path();
+	#endif
+	
+	// Look for resources.zip in the executable directory
+	std::filesystem::path zipPath = exePath / "resources.zip";
+	if (!std::filesystem::exists(zipPath)) {
+		// Fallback: try Demo directory relative to executable
+		zipPath = exePath.parent_path() / "Demo" / "resources.zip";
+	}
+	
+	fs::instance()->add(zipPath.string());
 
 	auto camera = std::make_shared<CameraFPS>(glm::vec3(0.0f, 1.0f, 0.0f),
 											  glm::vec3(0.0f, 2.0f, 0.0f), -110.f);
 	shader = Shader::fromFile(4,
 							  2,
 							  ":/shaders/core.vs",
-							  "/Users/cta/Development/personal/Omega/Demo/Resources/shaders/core.fs");
+							  "./core.fs");
 	shader->setInt("texture1", 0);
 	shader->setVec4("ambient", 0.15f, 0.15f, 0.15f, 1.0f);
 
@@ -71,13 +95,13 @@ public:
 	_scene->shaders(shader, plainShader);
 	_scene->debug(false);
 
-	_scene->import("/Users/cta/Development/personal/Omega/Demo/Resources/models/mp7.fbx");
+//	_scene->import("./resources/models/mp7.fbx");
 
 	auto idx = _scene->add(camera);
 
 	createLights();
-/*	generateCubes();
-	generateContainer();*/
+	generateCubes();
+	generateContainer();
 	generateGround();
 	generateDome();
 
@@ -300,7 +324,7 @@ private:
   std::shared_ptr<Texture> texture4;
 };
 
-int main() {
+int main(int argc, char* argv[]) {
   OSystem::init();
 
   auto window = new MainWindow();

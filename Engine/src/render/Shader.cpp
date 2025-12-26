@@ -25,10 +25,9 @@ using namespace omega::geometry;
 #define MAX_SPOT 4
 #define MAX_DIRECTIONAL 4
 
-std::string Shader::loadShaderSource(std::string fileName) {
+std::string Shader::loadShaderSource(const std::string& fileName) {
   std::string temp = "";
   std::string src = "";
-  std::cout << src << std::endl;
 
   std::ifstream in_file;
 
@@ -46,7 +45,7 @@ std::string Shader::loadShaderSource(std::string fileName) {
   return src;
 }
 
-GLuint Shader::loadShaderFromFile(GLenum type, std::string fileName) {
+GLuint Shader::loadShaderFromFile(GLenum type, const std::string& fileName) {
   char infoLog[512];
   GLint success;
 
@@ -67,7 +66,7 @@ GLuint Shader::loadShaderFromFile(GLenum type, std::string fileName) {
   return shader;
 }
 
-GLuint Shader::loadShaderFromString(GLenum type, std::string str_src) {
+GLuint Shader::loadShaderFromString(GLenum type, const std::string& str_src) {
   char infoLog[512];
   GLint success;
 
@@ -115,8 +114,8 @@ void Shader::linkProgram(GLuint vertexShader, GLuint geometryShader,
 
 // Constructors/Destructors
 Shader::Shader(const int versionMajor, const int versionMinor,
-			   std::string vertexFile, std::string fragmentFile,
-			   std::string geometryFile)
+			   const std::string& vertexFile, const std::string& fragmentFile,
+			   const std::string& geometryFile)
 	: versionMajor(versionMajor), versionMinor(versionMinor) {
   GLuint vertexShader = 0;
   GLuint geometryShader = 0;
@@ -138,17 +137,19 @@ Shader::Shader(const int versionMajor, const int versionMinor,
 }
 
 Shader::Shader(const int versionMajor, const int versionMinor)
-	: versionMajor(versionMajor), versionMinor(versionMinor) {
-  GLuint vertexShader = 0;
-  GLuint geometryShader = 0;
-  GLuint fragmentShader = 0;
+	: id(0), versionMajor(versionMajor), versionMinor(versionMinor) {
+  // Empty constructor - shaders must be loaded separately via loadShadersFromFile/String
 }
 
-Shader::~Shader() { glDeleteProgram(this->id); }
+Shader::~Shader() { 
+  if (id != 0) {
+	glDeleteProgram(this->id);
+  }
+}
 
-bool Shader::loadShadersFromString(std::string vertexCode,
-								   std::string fragmentCode,
-								   std::string geometryCode) {
+bool Shader::loadShadersFromString(const std::string& vertexCode,
+								   const std::string& fragmentCode,
+								   const std::string& geometryCode) {
   GLuint vertexShader = 0;
   GLuint geometryShader = 0;
   GLuint fragmentShader = 0;
@@ -169,9 +170,9 @@ bool Shader::loadShadersFromString(std::string vertexCode,
   return true;
 }
 
-bool Shader::loadShadersFromFile(std::string vertexFile,
-								 std::string fragmentFile,
-								 std::string geometryFile) {
+bool Shader::loadShadersFromFile(const std::string& vertexFile,
+								 const std::string& fragmentFile,
+								 const std::string& geometryFile) {
   GLuint vertexShader = 0;
   GLuint geometryShader = 0;
   GLuint fragmentShader = 0;
@@ -197,7 +198,7 @@ void Shader::use() { glUseProgram(this->id); }
 
 void Shader::unuse() { glUseProgram(0); }
 
-void Shader::setInt(std::string name, GLint value) {
+void Shader::setInt(const std::string& name, GLint value) {
   this->use();
 
   glUniform1i(glGetUniformLocation(this->id, name.c_str()), value);
@@ -205,7 +206,7 @@ void Shader::setInt(std::string name, GLint value) {
   this->unuse();
 }
 
-void Shader::setFloat(std::string name, GLfloat value) {
+void Shader::setFloat(const std::string& name, GLfloat value) {
   this->use();
 
   glUniform1f(glGetUniformLocation(this->id, name.c_str()), value);
@@ -213,7 +214,7 @@ void Shader::setFloat(std::string name, GLfloat value) {
   this->unuse();
 }
 
-void Shader::setVec2(std::string name, glm::vec2 value) {
+void Shader::setVec2(const std::string& name, glm::vec2 value) {
   this->use();
 
   glUniform2fv(glGetUniformLocation(this->id, name.c_str()), 1, &value[0]);
@@ -221,7 +222,7 @@ void Shader::setVec2(std::string name, glm::vec2 value) {
   this->unuse();
 }
 
-void Shader::setVec3(std::string name, glm::vec3 value) {
+void Shader::setVec3(const std::string& name, glm::vec3 value) {
   this->use();
 
   glUniform3fv(glGetUniformLocation(this->id, name.c_str()), 1, &value[0]);
@@ -229,7 +230,7 @@ void Shader::setVec3(std::string name, glm::vec3 value) {
   this->unuse();
 }
 
-void Shader::setVec4(std::string name, glm::vec4 value) {
+void Shader::setVec4(const std::string& name, glm::vec4 value) {
   this->use();
 
   glUniform4fv(glGetUniformLocation(this->id, name.c_str()), 1, &value[0]);
@@ -237,7 +238,7 @@ void Shader::setVec4(std::string name, glm::vec4 value) {
   this->unuse();
 }
 
-void Shader::setMat4fv(const std::string name, glm::mat4 value,
+void Shader::setMat4fv(const std::string& name, glm::mat4 value,
 					   bool transpose) {
   this->use();
 
@@ -247,19 +248,19 @@ void Shader::setMat4fv(const std::string name, glm::mat4 value,
   this->unuse();
 }
 
-void Shader::setVec3(std::string name, float x, float y, float z) {
+void Shader::setVec3(const std::string& name, float x, float y, float z) {
   setVec3(name, glm::vec3(x, y, z));
 }
 
-void Shader::setVec4(std::string name, float x, float y, float z, float w) {
+void Shader::setVec4(const std::string& name, float x, float y, float z, float w) {
   setVec4(name, glm::vec4(x, y, z, w));
 }
 
 std::shared_ptr<Shader> Shader::fromString(const int versionMajor,
 										   const int versionMinor,
-										   std::string vertexCode,
-										   std::string fragmentCode,
-										   std::string geometryCode) {
+										   const std::string& vertexCode,
+										   const std::string& fragmentCode,
+										   const std::string& geometryCode) {
   auto ptr = std::make_shared<Shader>(versionMajor, versionMinor);
 
   ptr->loadShadersFromString(vertexCode, fragmentCode, geometryCode);
@@ -269,9 +270,9 @@ std::shared_ptr<Shader> Shader::fromString(const int versionMajor,
 
 std::shared_ptr<Shader> Shader::fromFile(const int versionMajor,
 										 const int versionMinor,
-										 std::string vertexFile,
-										 std::string fragmentFile,
-										 std::string geometryFile) {
+										 const std::string& vertexFile,
+										 const std::string& fragmentFile,
+										 const std::string& geometryFile) {
   auto ptr = std::make_shared<Shader>(versionMajor, versionMinor);
 
   ptr->loadShadersFromFile(vertexFile, fragmentFile, geometryFile);
@@ -282,17 +283,17 @@ std::shared_ptr<Shader> Shader::fromFile(const int versionMajor,
 auto Shader::getLightNumber(interface::LightType type) -> int {
   switch (type) {
   case interface::LightType::POINT:
-	if (point_lights_++ > MAX_POINT)
+	if (point_lights_ >= MAX_POINT)
 	  return -1;
-	return point_lights_ - 1;
+	return point_lights_++;
   case interface::LightType::SPOT:
-	if (spot_lights_++ > MAX_SPOT)
+	if (spot_lights_ >= MAX_SPOT)
 	  return -1;
-	return spot_lights_ - 1;
+	return spot_lights_++;
   case interface::LightType::DIRECTIONAL:
-	if (directional_lights_++ > MAX_DIRECTIONAL)
+	if (directional_lights_ >= MAX_DIRECTIONAL)
 	  return -1;
-	return directional_lights_ - 1;
+	return directional_lights_++;
   }
   return -1;
 }

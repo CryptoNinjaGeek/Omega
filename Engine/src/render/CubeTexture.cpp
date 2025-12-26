@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <glad/glad.h>
+#include <stb_image.h>
 
 using namespace omega::render;
 
@@ -19,7 +20,7 @@ bool CubeTexture::load(input::CubeTextureInput input) {
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
                    imageInfo.width, imageInfo.height, 0, GL_RGB,
                    GL_UNSIGNED_BYTE, imageInfo.data);
-      free(imageInfo.data);
+      stbi_image_free(imageInfo.data);
     } else {
       std::cout << "Cubemap texture failed to load at path: " << faces[i]
                 << std::endl;

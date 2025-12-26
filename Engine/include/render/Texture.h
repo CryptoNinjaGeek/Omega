@@ -19,12 +19,12 @@ public:
 
   virtual auto activate(int no) -> bool;
 
-  auto load(std::string fileName, std::string name = {}) -> bool;
+  auto load(const std::string& fileName, const std::string& name = {}) -> bool;
   auto name() -> std::string { return _name; }
-  auto name(std::string name) -> void { _name = name; }
+  auto name(const std::string& name) -> void { _name = name; }
 
 protected:
-  auto loadImageData(std::string fileName, bool flip = true, std::string name = {}) -> ImageInfo;
+  auto loadImageData(const std::string& fileName, bool flip = true, const std::string& name = {}) -> ImageInfo;
 
 protected:
   unsigned int m_textureId{0};

@@ -16,3 +16,4 @@ Debug
 Bin64-Debug/*.*
 build/
 .cache/
+bin

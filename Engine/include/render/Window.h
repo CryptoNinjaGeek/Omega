@@ -3,6 +3,7 @@
 #include <render/Camera.h>
 #include <system/Global.h>
 #include <render/KeyCodes.h>
+#include <memory>
 
 class GLFWwindow;
 
@@ -176,6 +177,7 @@ class OMEGA_EXPORT Window {
   void setCamera(std::shared_ptr<Camera>);
 
   static std::shared_ptr<Window> instance();
+  static void setInstance(std::shared_ptr<Window> window);
 
   inline bool isKeyPressed(omega::system::KeyCode kc) { return keys[kc]; }
 

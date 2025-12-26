@@ -29,7 +29,9 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
-  mainWindow->mouseWheelEvent(xoffset, yoffset);
+  if (mainWindow) {
+	mainWindow->mouseWheelEvent(xoffset, yoffset);
+  }
 }
 
 void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
@@ -48,7 +50,9 @@ void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
   lastX = xpos;
   lastY = ypos;
 
-  mainWindow->mouseMoveEvent(xoffset, yoffset);
+  if (mainWindow) {
+	mainWindow->mouseMoveEvent(xoffset, yoffset);
+  }
 }
 
 static inline int translateState(int action) {
@@ -206,17 +210,27 @@ void keyboard_callback(GLFWwindow *window, int glfw_key, int, int glfw_action,
 	_lastState = state;
 
   // int type, int state, int key, bool repeat
-  mainWindow->keyEvent(state==Window::KEY_STATE_REPEAT ? _lastState : state,
-					   key, modifier, state==Window::KEY_STATE_REPEAT);
+  if (mainWindow) {
+	mainWindow->keyEvent(state==Window::KEY_STATE_REPEAT ? _lastState : state,
+						 key, modifier, state==Window::KEY_STATE_REPEAT);
+  }
 }
 
 Window::Window(int width, int height, int flags) {
-  mainWindow = std::shared_ptr<Window>(this);
-
   m_width = width;
   m_height = height;
 
   initGL();
+  
+  // Set mainWindow to this instance for callback access
+  // Use a custom deleter that does nothing to prevent double deletion
+  // when mainWindow shared_ptr goes out of scope, since Window may be
+  // managed by raw pointer (as in main.cpp with 'new MainWindow()')
+  if (!mainWindow) {
+	mainWindow = std::shared_ptr<Window>(this, [](Window*) {
+	  // Empty deleter - prevents double deletion
+	});
+  }
 }
 
 Window::~Window() {}
@@ -224,6 +238,10 @@ Window::~Window() {}
 void Window::keyEvent(int state, int key, int modifier, bool repeat) {}
 
 std::shared_ptr<Window> Window::instance() { return mainWindow; }
+
+void Window::setInstance(std::shared_ptr<Window> window) {
+  mainWindow = window;
+}
 
 void Window::mouseWheelEvent(float xoffset, float yoffset) {
   if (camera)
@@ -285,17 +303,18 @@ void Window::processEvents() {
   if (glfwGetKey(m_window, GLFW_KEY_ESCAPE)==GLFW_PRESS)
 	m_quit = true;
 
-  float cameraSpeed = static_cast<float>(2.5*m_deltaTime);
-  if (glfwGetKey(m_window, GLFW_KEY_W)==GLFW_PRESS)
-	camera->processKeyboard(FORWARD, m_deltaTime);
-  if (glfwGetKey(m_window, GLFW_KEY_S)==GLFW_PRESS)
-	camera->processKeyboard(BACKWARD, m_deltaTime);
-  if (glfwGetKey(m_window, GLFW_KEY_A)==GLFW_PRESS)
-	camera->processKeyboard(LEFT, m_deltaTime);
-  if (glfwGetKey(m_window, GLFW_KEY_D)==GLFW_PRESS)
-	camera->processKeyboard(RIGHT, m_deltaTime);
-  if (glfwGetKey(m_window, GLFW_KEY_SPACE)==GLFW_PRESS)
-	camera->processKeyboard(JUMP, m_deltaTime);
+  if (camera) {
+	if (glfwGetKey(m_window, GLFW_KEY_W)==GLFW_PRESS)
+	  camera->processKeyboard(FORWARD, m_deltaTime);
+	if (glfwGetKey(m_window, GLFW_KEY_S)==GLFW_PRESS)
+	  camera->processKeyboard(BACKWARD, m_deltaTime);
+	if (glfwGetKey(m_window, GLFW_KEY_A)==GLFW_PRESS)
+	  camera->processKeyboard(LEFT, m_deltaTime);
+	if (glfwGetKey(m_window, GLFW_KEY_D)==GLFW_PRESS)
+	  camera->processKeyboard(RIGHT, m_deltaTime);
+	if (glfwGetKey(m_window, GLFW_KEY_SPACE)==GLFW_PRESS)
+	  camera->processKeyboard(JUMP, m_deltaTime);
+  }
 }
 
 bool Window::isOpen() { return true; }
@@ -336,7 +355,10 @@ void Window::hide() { glfwHideWindow(m_window); }
 
 void Window::show() { glfwShowWindow(m_window); }
 
-void Window::close() { delete this; }
+void Window::close() { 
+  m_quit = true;
+  // Don't delete this - let shared_ptr manage lifetime
+}
 
 bool Window::isFullscreen() { return m_fullscreen; }
 
@@ -371,7 +393,7 @@ bool Window::initGL() {
   });
   if (!glfwInit()) {
 	std::cout << "GLFW failed to Initialize!" << std::endl;
-	return -1;
+	return false;
   }
 
   GLfloat vertices[] = {-0.5f, -0.5f*float(sqrt(3))/3, 0.0f,
@@ -389,7 +411,7 @@ bool Window::initGL() {
 		<< "Something went Wrong when Creating a Window!\nShutting down ..."
 		<< std::endl;
 	glfwTerminate();
-	return -1;
+	return false;
   }
   glfwSetFramebufferSizeCallback(m_window, framebuffer_size_callback);
   glfwMakeContextCurrent(m_window);

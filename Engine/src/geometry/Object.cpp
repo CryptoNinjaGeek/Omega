@@ -113,7 +113,9 @@ auto Object::setupPhysics(reactphysics3d::PhysicsWorld *world,
 }
 
 auto Object::debug(bool val) -> void {
-  body_->setIsDebugEnabled(val);
+  if (body_) {
+	body_->setIsDebugEnabled(val);
+  }
 }
 
 auto Object::process() -> void {
