@@ -57,6 +57,12 @@ public:
   auto physics(physics::PhysicsObject physicsObject) -> void { physicsObject_ = physicsObject; }
   inline auto visible(bool val) -> void { visible_ = val; }
   inline auto visible() -> bool { return visible_; }
+  
+  // Getters for portal rendering
+  unsigned int getVAO() const { return vao_; }
+  unsigned int getCount() const { return count_; }
+  ObjectType getType() const { return type_; }
+  glm::mat4 getModel() const { return model_; }
 
 protected:
   std::string name_;

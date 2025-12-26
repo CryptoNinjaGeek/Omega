@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(OpenGL REQUIRED)
 
+# Fetch nlohmann/json
+include(FetchContent)
+FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.2
+)
+FetchContent_MakeAvailable(json)
+
 add_library(oEngine SHARED
         src/geometry/Quaternion.cpp
         src/geometry/Point2.cpp
@@ -15,6 +24,7 @@ add_library(oEngine SHARED
         src/system/System.cpp
         src/render/Shader.cpp
         src/render/Texture.cpp
+        src/render/PortalFramebuffer.cpp
         src/other/glad.c
 
         include/system/Global.h
@@ -35,6 +45,7 @@ add_library(oEngine SHARED
         include/render/Camera.h
         include/render/CameraFly.h
         include/render/CameraFPS.h
+        include/render/PortalCamera.h
 
         include/render/Shader.h
         include/render/Texture.h
@@ -72,6 +83,8 @@ add_library(oEngine SHARED
         src/render/Camera.cpp
         src/render/CameraFly.cpp
         src/render/CameraFPS.cpp
+        src/render/PortalCamera.cpp
+        src/render/PortalViewCamera.cpp
 
         src/geometry/ComplexObject.cpp
         include/geometry/ComplexObject.h
@@ -84,6 +97,17 @@ add_library(oEngine SHARED
 
         include/geometry/ObjectTree.h
         src/geometry/ObjectTree.cpp
+        include/geometry/Portal.h
+        src/geometry/Portal.cpp
+        include/geometry/PortalPair.h
+        src/geometry/PortalPair.cpp
+        include/geometry/PortalSurface.h
+        src/geometry/PortalSurface.cpp
+        include/geometry/PortalRenderer.h
+        src/geometry/PortalRenderer.cpp
+        include/render/PortalFramebuffer.h
+        include/utils/PortalSceneLoader.h
+        src/utils/PortalSceneLoader.cpp
 )
 
 include_directories(oEngine PUBLIC include)
@@ -101,6 +125,7 @@ target_link_libraries(oEngine
         zip
         assimp
         reactphysics3d
+        nlohmann_json::nlohmann_json
 )
 
 target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB GL_SILENCE_DEPRECATION)

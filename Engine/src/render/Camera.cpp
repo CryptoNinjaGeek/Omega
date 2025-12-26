@@ -45,7 +45,7 @@ auto Camera::updateShader() -> void {
   }
 }
 
-glm::mat4 Camera::viewMatrix() {
+glm::mat4 Camera::viewMatrix() const {
   return glm::lookAt(position_, position_ + front_, up_);
 }
 

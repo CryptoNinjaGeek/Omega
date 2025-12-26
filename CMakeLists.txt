@@ -59,6 +59,12 @@ FetchContent_Declare(
         GIT_TAG v1.10.0
         GIT_SHALLOW TRUE
 )
+FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+        GIT_SHALLOW TRUE
+)
 
 message(STATUS "${Green} GLFW Should Be Downloaded ${ColourReset}")
 message(STATUS "${Green} GLM Should Be Downloaded ${ColourReset}")
@@ -71,6 +77,7 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(libpng)
 FetchContent_MakeAvailable(spdlog)
+FetchContent_MakeAvailable(json)
 
 
 set(CMAKE_CXX_STANDARD 17)

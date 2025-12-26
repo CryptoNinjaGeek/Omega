@@ -41,14 +41,14 @@ public:
 
   auto updateShader() -> void;
 
-  glm::mat4 viewMatrix();
+  glm::mat4 viewMatrix() const;
 
   virtual void processKeyboard(Camera_Movement direction, float deltaTime);
   void processMouseMovement(float xoffset, float yoffset,
 							bool constrainPitch = true);
   void processMouseScroll(float yoffset);
-  auto front() -> glm::vec3 { return front_; }
-  auto position() -> glm::vec3 { return position_; }
+  auto front() const -> glm::vec3 { return front_; }
+  auto position() const -> glm::vec3 { return position_; }
   auto setPositon(glm::vec3 pos) -> void { position_ = pos; }
   auto setLookAt(glm::vec3 lookAt) -> void;
   auto setPerspective(float const &fov, float const &width, float const &height,

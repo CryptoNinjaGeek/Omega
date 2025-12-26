@@ -34,6 +34,9 @@ using namespace omega::interface;
 namespace omega {
 namespace geometry {
 
+// Forward declaration to break circular dependency
+class PortalRenderer;
+
 class Scene {
 public:
   // constructor, expects a filepath to a 3D model.
@@ -63,6 +66,10 @@ public:
 
   auto setCurrentCamera(unsigned int index) -> void;
   auto currentCamera() -> std::shared_ptr<Camera> { return cameras_[current_camera_]; }
+  
+  // Portal rendering support
+  void setPortalRenderer(std::shared_ptr<PortalRenderer> renderer) { portalRenderer_ = renderer; }
+  std::shared_ptr<PortalRenderer> getPortalRenderer() const { return portalRenderer_; }
 private:
   void loadModel(std::string const &path);
   auto prepare(ObjectNodePtr node) -> void;
@@ -90,6 +97,9 @@ protected:
 
   bool gammaCorrection{false};
   bool debug_{false};
+  
+  // Portal rendering
+  std::shared_ptr<PortalRenderer> portalRenderer_{nullptr};
 };
 }  // namespace geometry
 }  // namespace omega

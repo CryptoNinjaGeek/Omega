@@ -36,6 +36,9 @@ void Object::render(std::shared_ptr<render::Camera> camera) {
   shader_->setMat4fv("projection", camera->projectionMatrix());
   shader_->setMat4fv("view", camera->viewMatrix());
   shader_->setMat4fv("model", model_);
+  
+  // Set viewPos for lighting calculations
+  shader_->setVec3("viewPos", camera->position());
 
   if (material_)
 	shader_->setFloat("material.shininess", material_.value().shininess);

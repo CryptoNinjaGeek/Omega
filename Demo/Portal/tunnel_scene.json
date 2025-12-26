@@ -1,0 +1,602 @@
+{
+  "version": "1.0",
+  "scene": {
+    "name": "Complex Tunnel System",
+    "camera": {
+      "position": [0.0, 1.0, 0.0],
+      "yaw": 0.0,
+      "pitch": 0.0
+    },
+    "ambient": [0.5, 0.5, 0.5, 1.0],
+    "textures": {
+      "floor": {
+        "file": ":/textures/Building_Floor_v1.tga",
+        "type": "diffuse"
+      },
+      "wall": {
+        "file": ":/textures/Building_Wall_v1.tga",
+        "type": "diffuse"
+      },
+      "ceiling": {
+        "file": ":/textures/Building_Roof_v1.tga",
+        "type": "diffuse"
+      },
+      "concrete": {
+        "file": ":/textures/concreteTexture.png",
+        "type": "diffuse"
+      },
+      "container": {
+        "file": ":/textures/Cargo_container_v1.tga",
+        "type": "diffuse"
+      },
+      "wooden_box": {
+        "file": ":/textures/Wooden_box_v1.tga",
+        "type": "diffuse"
+      }
+    },
+    "materials": {
+      "default": {
+        "shininess": 32.0
+      },
+      "metal": {
+        "shininess": 128.0
+      }
+    },
+    "objects": [
+      {
+        "type": "plane",
+        "name": "mainFloor",
+        "position": [0.0, 0.0, 0.0],
+        "size": 50.0,
+        "textures": ["concrete"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel1_floor",
+        "position": [-10.0, 0.0, 0.0],
+        "size": [4.0, 0.1, 20.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel1_leftWall",
+        "position": [-12.0, 2.0, 0.0],
+        "size": [0.2, 4.0, 20.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel1_rightWall",
+        "position": [-8.0, 2.0, 0.0],
+        "size": [0.2, 4.0, 20.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel1_ceiling",
+        "position": [-10.0, 4.0, 0.0],
+        "size": [4.0, 0.2, 20.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel2_floor",
+        "position": [10.0, 0.0, 0.0],
+        "size": [4.0, 0.1, 20.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel2_leftWall",
+        "position": [8.0, 2.0, 0.0],
+        "size": [0.2, 4.0, 20.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel2_rightWall",
+        "position": [12.0, 2.0, 0.0],
+        "size": [0.2, 4.0, 20.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel2_ceiling",
+        "position": [10.0, 4.0, 0.0],
+        "size": [4.0, 0.2, 20.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel3_floor",
+        "position": [0.0, 0.0, -15.0],
+        "size": [20.0, 0.1, 4.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel3_leftWall",
+        "position": [0.0, 2.0, -17.0],
+        "size": [20.0, 4.0, 0.2],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel3_rightWall",
+        "position": [0.0, 2.0, -13.0],
+        "size": [20.0, 4.0, 0.2],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel3_ceiling",
+        "position": [0.0, 4.0, -15.0],
+        "size": [20.0, 0.2, 4.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel4_floor",
+        "position": [0.0, 0.0, 15.0],
+        "size": [20.0, 0.1, 4.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel4_leftWall",
+        "position": [0.0, 2.0, 13.0],
+        "size": [20.0, 4.0, 0.2],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel4_rightWall",
+        "position": [0.0, 2.0, 17.0],
+        "size": [20.0, 4.0, 0.2],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel4_ceiling",
+        "position": [0.0, 4.0, 15.0],
+        "size": [20.0, 0.2, 4.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel5_floor",
+        "position": [-10.0, 0.0, -20.0],
+        "size": [4.0, 0.1, 10.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel5_leftWall",
+        "position": [-12.0, 2.0, -20.0],
+        "size": [0.2, 4.0, 10.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel5_rightWall",
+        "position": [-8.0, 2.0, -20.0],
+        "size": [0.2, 4.0, 10.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel5_ceiling",
+        "position": [-10.0, 4.0, -20.0],
+        "size": [4.0, 0.2, 10.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel6_floor",
+        "position": [10.0, 0.0, 20.0],
+        "size": [4.0, 0.1, 10.0],
+        "textures": ["floor"],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "BOX"
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel6_leftWall",
+        "position": [8.0, 2.0, 20.0],
+        "size": [0.2, 4.0, 10.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel6_rightWall",
+        "position": [12.0, 2.0, 20.0],
+        "size": [0.2, 4.0, 10.0],
+        "textures": ["wall"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "tunnel6_ceiling",
+        "position": [10.0, 4.0, 20.0],
+        "size": [4.0, 0.2, 10.0],
+        "textures": ["ceiling"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box1",
+        "position": [-10.0, 0.5, 5.0],
+        "size": 0.8,
+        "textures": ["container"],
+        "material": "metal",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box2",
+        "position": [-10.0, 0.5, -5.0],
+        "size": 0.8,
+        "textures": ["wooden_box"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box3",
+        "position": [10.0, 0.5, 5.0],
+        "size": 0.8,
+        "textures": ["container"],
+        "material": "metal",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box4",
+        "position": [10.0, 0.5, -5.0],
+        "size": 0.8,
+        "textures": ["wooden_box"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box5",
+        "position": [-5.0, 0.5, -15.0],
+        "size": 0.8,
+        "textures": ["container"],
+        "material": "metal",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box6",
+        "position": [5.0, 0.5, -15.0],
+        "size": 0.8,
+        "textures": ["wooden_box"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box7",
+        "position": [-5.0, 0.5, 15.0],
+        "size": 0.8,
+        "textures": ["container"],
+        "material": "metal",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "decoration_box8",
+        "position": [5.0, 0.5, 15.0],
+        "size": 0.8,
+        "textures": ["wooden_box"],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      }
+    ],
+    "portals": [
+      {
+        "id": "portal_main_left",
+        "name": "Main Left Portal",
+        "position": [-8.0, 1.5, 0.0],
+        "normal": [1.0, 0.0, 0.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_main_right",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_main_right",
+        "name": "Main Right Portal",
+        "position": [8.0, 1.5, 0.0],
+        "normal": [-1.0, 0.0, 0.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_main_left",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_north_south",
+        "name": "North-South Portal",
+        "position": [0.0, 1.5, -13.0],
+        "normal": [0.0, 0.0, 1.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_south_north",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_south_north",
+        "name": "South-North Portal",
+        "position": [0.0, 1.5, 13.0],
+        "normal": [0.0, 0.0, -1.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_north_south",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_tunnel1_end",
+        "name": "Tunnel 1 End Portal",
+        "position": [-10.0, 1.5, -15.0],
+        "normal": [0.0, 0.0, 1.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_tunnel2_end",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_tunnel2_end",
+        "name": "Tunnel 2 End Portal",
+        "position": [10.0, 1.5, 25.0],
+        "normal": [0.0, 0.0, -1.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_tunnel1_end",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_cross1",
+        "name": "Cross Portal 1",
+        "position": [-10.0, 1.5, -10.0],
+        "normal": [1.0, 0.0, 0.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_cross2",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "id": "portal_cross2",
+        "name": "Cross Portal 2",
+        "position": [10.0, 1.5, 10.0],
+        "normal": [-1.0, 0.0, 0.0],
+        "width": 2.0,
+        "height": 3.0,
+        "linkedTo": "portal_cross1",
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 1024,
+          "height": 1024
+        }
+      }
+    ],
+    "lights": [
+      {
+        "type": "directional",
+        "direction": [-0.2, -1.0, -0.3],
+        "ambient": [0.6, 0.6, 0.6],
+        "diffuse": [1.0, 1.0, 1.0],
+        "specular": [1.0, 1.0, 1.0],
+        "enabled": true
+      },
+      {
+        "type": "point",
+        "position": [-10.0, 2.0, 0.0],
+        "ambient": [0.3, 0.3, 0.3],
+        "diffuse": [0.8, 0.8, 0.8],
+        "specular": [1.0, 1.0, 1.0],
+        "constant": 1.0,
+        "linear": 0.09,
+        "quadratic": 0.032,
+        "enabled": true
+      },
+      {
+        "type": "point",
+        "position": [10.0, 2.0, 0.0],
+        "ambient": [0.3, 0.3, 0.3],
+        "diffuse": [0.8, 0.8, 0.8],
+        "specular": [1.0, 1.0, 1.0],
+        "constant": 1.0,
+        "linear": 0.09,
+        "quadratic": 0.032,
+        "enabled": true
+      },
+      {
+        "type": "point",
+        "position": [0.0, 2.0, -15.0],
+        "ambient": [0.3, 0.3, 0.3],
+        "diffuse": [0.8, 0.8, 0.8],
+        "specular": [1.0, 1.0, 1.0],
+        "constant": 1.0,
+        "linear": 0.09,
+        "quadratic": 0.032,
+        "enabled": true
+      },
+      {
+        "type": "point",
+        "position": [0.0, 2.0, 15.0],
+        "ambient": [0.3, 0.3, 0.3],
+        "diffuse": [0.8, 0.8, 0.8],
+        "specular": [1.0, 1.0, 1.0],
+        "constant": 1.0,
+        "linear": 0.09,
+        "quadratic": 0.032,
+        "enabled": true
+      }
+    ]
+  }
+}
+

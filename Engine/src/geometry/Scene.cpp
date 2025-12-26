@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <geometry/Scene.h>
+#include <geometry/PortalRenderer.h>
 #include <system/FileSystem.h>
 #include <system/TextureManager.h>
 #include <utils/Loader.h>
@@ -83,7 +84,25 @@ auto Scene::prepare(ObjectNodePtr node) -> void {
 }
 
 void Scene::render() {
-  this->render(cameras_[current_camera_]);
+  auto camera = cameras_[current_camera_];
+  
+  // Render portal views first (to framebuffers) - BEFORE main scene
+  // Note: We pass 'this' as shared_ptr - caller must ensure Scene is managed by shared_ptr
+  if (portalRenderer_ && portalRenderer_->isEnabled()) {
+    // Create temporary shared_ptr for portal rendering
+    // In practice, Scene should be managed by shared_ptr from the start
+    std::shared_ptr<Scene> scenePtr(this, [](Scene*){});  // Non-owning shared_ptr
+    portalRenderer_->renderPortals(scenePtr, camera, meshShader_);
+  }
+  
+  // Render main scene
+  this->render(camera);
+  
+  // Render portal surfaces AFTER main scene so they appear on top
+  // Pass nullptr to let PortalRenderer create/use the portal shader
+  if (portalRenderer_ && portalRenderer_->isEnabled()) {
+    portalRenderer_->renderPortalSurfaces(camera, nullptr);
+  }
 }
 
 // draws the model, and thus all its meshes
