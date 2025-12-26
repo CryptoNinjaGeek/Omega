@@ -17,7 +17,7 @@ FetchContent_Declare(
 FetchContent_Declare(
         libzip
         GIT_REPOSITORY https://github.com/nih-at/libzip.git
-        GIT_TAG v1.9.2
+        GIT_TAG v1.10.1
 )
 
 FetchContent_Declare(
@@ -36,10 +36,22 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/glfw/glfw.git
         GIT_TAG 3.3.8
 )
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+)
+set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
         libpng
         GIT_REPOSITORY https://github.com/glennrp/libpng.git
-        GIT_TAG v1.6.39
+        GIT_TAG v1.6.43
 )
 FetchContent_Declare(
         spdlog
@@ -48,46 +60,15 @@ FetchContent_Declare(
         GIT_SHALLOW TRUE
 )
 
-FetchContent_GetProperties(glfw)
-if (NOT glfw_POPULATED)
-    FetchContent_Populate(glfw)
-    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR})
-endif ()
 message(STATUS "${Green} GLFW Should Be Downloaded ${ColourReset}")
-
-FetchContent_Declare(
-        glm
-        GIT_REPOSITORY https://github.com/g-truc/glm.git
-        GIT_TAG 0.9.9.8
-)
-
-FetchContent_GetProperties(glm)
-if (NOT glm_POPULATED)
-    FetchContent_Populate(glm)
-    set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
-    add_subdirectory(${glm_SOURCE_DIR} ${glm_BINARY_DIR})
-endif ()
 message(STATUS "${Green} GLM Should Be Downloaded ${ColourReset}")
-
-FetchContent_Declare(
-        stb_image
-        GIT_REPOSITORY https://github.com/jschmidt42/stb-cmake.git
-)
-
-FetchContent_GetProperties(stb_image)
-
-if (NOT stb_image_POPULATED)
-    FetchContent_Populate(stb_image)
-endif ()
 
 FetchContent_MakeAvailable(reactphysics3d)
 FetchContent_MakeAvailable(libzip)
 FetchContent_MakeAvailable(audeo)
 FetchContent_MakeAvailable(assimp)
 FetchContent_MakeAvailable(glfw)
+FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(libpng)
 FetchContent_MakeAvailable(spdlog)
 

@@ -59,4 +59,5 @@ bool Texture::activate(int no) {
   // bind textures on corresponding texture units
   glActiveTexture(GL_TEXTURE0 + no);
   glBindTexture(GL_TEXTURE_2D, m_textureId);
+  return true;
 }

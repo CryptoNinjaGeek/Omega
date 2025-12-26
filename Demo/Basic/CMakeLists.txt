@@ -23,3 +23,4 @@ include_directories(Basic PUBLIC
 )
 target_link_libraries(Basic oEngine)
 target_compile_definitions(Basic PRIVATE IMPORT_ENGINE_LIB)
+target_compile_options(Basic PRIVATE -Wno-deprecated-declarations)

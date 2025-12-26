@@ -44,10 +44,11 @@ auto TextureManager::texture(std::string name) -> TexturePtr {
 }
 
 auto TextureManager::path(std::string path) -> bool {
-  if (std::find(_paths.begin(), _paths.end(), path)!=_paths.end()) {
+  if (std::find(_paths.begin(), _paths.end(), path)==_paths.end()) {
 	_paths.push_back(path);
 	return true;
   }
+  return false;
 }
 
 auto TextureManager::locate(std::string name) -> std::string {

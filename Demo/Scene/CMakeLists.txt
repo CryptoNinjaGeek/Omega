@@ -23,3 +23,4 @@ include_directories(Scene PUBLIC
 )
 target_link_libraries(Scene oEngine)
 target_compile_definitions(Scene PRIVATE IMPORT_ENGINE_LIB)
+target_compile_options(Scene PRIVATE -Wno-deprecated-declarations)

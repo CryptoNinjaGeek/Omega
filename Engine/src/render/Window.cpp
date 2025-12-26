@@ -56,6 +56,7 @@ static inline int translateState(int action) {
   case GLFW_PRESS:return Window::KEY_STATE_DOWN;
   case GLFW_RELEASE:return Window::KEY_STATE_UP;
   case GLFW_REPEAT:return Window::KEY_STATE_REPEAT;
+  default:return Window::KEY_STATE_UP;
   }
 }
 static inline int translateKey(int key) {
@@ -180,6 +181,7 @@ static inline int translateKey(int key) {
   case GLFW_KEY_RIGHT_ALT:return Window::KEY_RIGHT_ALT;
   case GLFW_KEY_RIGHT_SUPER:return Window::KEY_RIGHT_SUPER;
   case GLFW_KEY_MENU:return Window::KEY_MENU;
+  default:return -1;
   }
 }
 static inline int translateModifier(int modifier) {
@@ -190,6 +192,7 @@ static inline int translateModifier(int modifier) {
   case GLFW_MOD_SUPER:return Window::SUPER;
   case GLFW_MOD_CAPS_LOCK:return Window::CAPS_LOCK;
   case GLFW_MOD_NUM_LOCK:return Window::NUM_LOCK;
+  default:return 0;
   }
 }
 

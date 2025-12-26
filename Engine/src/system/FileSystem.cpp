@@ -47,6 +47,7 @@ auto FileSystem::addZipFile(std::string file) -> bool {
 		  ZipFile{.za = za, .index = i, .size = (unsigned int)sb.size};
 	}
   }
+  return true;
 }
 
 auto FileSystem::string(std::string file) -> std::string {

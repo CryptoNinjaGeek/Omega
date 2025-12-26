@@ -38,4 +38,5 @@ bool CubeTexture::activate(int no) {
   // bind textures on corresponding texture units
   glActiveTexture(GL_TEXTURE0 + no);
   glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureId);
+  return true;
 }
