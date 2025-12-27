@@ -381,10 +381,39 @@ make
 
 ---
 
+---
+
+## Phase 4: Doorway-Based Portal System (In Progress)
+
+### Step 4.0: Design Document Created ✅
+- Created `PORTAL_DOORWAY_DESIGN.md` with complete architecture
+- Defined rendering strategy: forward -> back -> forward
+- Specified culling checks and recursion limiting
+- Outlined implementation plan
+
+### Step 4.1: Rooms Demo Created ✅
+- Created new `Demo/Rooms` demo
+- Two rooms connected by hallway
+- Uses appropriate textures (Building_Floor_v1.tga, Building_Wall_v1.tga, Building_Roof_v1.tga)
+- Camera positioned in first room looking toward hallway
+- Portal pairs set up as doorways between rooms
+- Scene loaded from `rooms_scene.json`
+
+### Next Steps for Phase 4:
+1. **Refactor Portal Class** - Add `destination_`, `isPassable_`, `hasMirrorOverlay_`, `isOpen_`
+2. **Update PortalSceneLoader** - Parse new JSON format with `destinationId`
+3. **Refactor PortalRenderer** - Remove PortalPair dependency, use standalone portals
+4. **Update PortalCamera** - Handle doorway and mirror views
+5. **Implement Culling** - Visibility checks, frustum culling, portal clipping
+6. **Implement Recursion Control** - Track active portals, limit depth
+
+---
+
 *Last Updated: [Current Date]*
 *Engine Version: Current*
 *Phase 1 Status: ✅ COMPLETE*
 *Phase 3 Status: ✅ COMPLETE (Portal Rendering Functional!)*
 *JSON Scene Loader: ✅ COMPLETE*
 *Demo Status: ✅ Portal Demo with Working Portal Rendering*
+*Phase 4 Status: 🚧 IN PROGRESS (Design Complete, Rooms Demo Created)*
 

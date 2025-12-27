@@ -15,6 +15,8 @@
 #include <utils/ObjectGenerator.h>
 #include <utils/Loader.h>
 #include <nlohmann/json.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
 using namespace omega::utils;
@@ -148,7 +150,24 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
     std::string type = parseString(objJson, "type", "box");
     std::string name = parseString(objJson, "name", "");
     auto position = parseVec3(objJson, "position");
-    float scale = parseFloat(objJson, "scale", 1.0f);
+    
+    // Parse scale: can be a single float or vec3
+    glm::vec3 scaleVec(1.0f);
+    if (objJson.contains("scale")) {
+      if (objJson["scale"].is_number()) {
+        // Single float - uniform scale
+        float scaleFloat = objJson["scale"].get<float>();
+        scaleVec = glm::vec3(scaleFloat);
+      } else if (objJson["scale"].is_array() && objJson["scale"].size() >= 3) {
+        // Vec3 - non-uniform scale
+        scaleVec = parseVec3(objJson, "scale", glm::vec3(1.0f));
+      }
+    }
+    float scale = scaleVec.x; // Keep for backward compatibility
+    
+    // Parse rotation: Euler angles in degrees (vec3)
+    glm::vec3 rotation = parseVec3(objJson, "rotation", glm::vec3(0.0f));
+    
     float size = parseFloat(objJson, "size", 0.5f);
     float mass = parseFloat(objJson, "mass", 1.0f);
     bool visible = parseBool(objJson, "visible", true);
@@ -212,12 +231,213 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
       input.name = name;
       object = ObjectGenerator::container(input);
     } else if (type == "mesh") {
+      // Check if it's a file-based mesh or custom geometry
       std::string meshFile = parseString(objJson, "meshFile", "");
       if (!meshFile.empty()) {
+        // File-based mesh
         auto tree = Loader::loadModel(meshFile);
         if (tree) {
           scene->add(tree);
           continue;  // Mesh loaded as tree, skip object creation
+        }
+      }
+      
+      // Custom geometry mesh (vertices and indices defined in JSON)
+      if (objJson.contains("vertices") && objJson.contains("indices")) {
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices;
+        
+        // Parse vertices
+        if (objJson["vertices"].is_array()) {
+          for (const auto& vJson : objJson["vertices"]) {
+            Vertex v;
+            if (vJson.contains("position") && vJson["position"].is_array() && vJson["position"].size() >= 3) {
+              v.position = glm::vec3(
+                vJson["position"][0].get<float>(),
+                vJson["position"][1].get<float>(),
+                vJson["position"][2].get<float>()
+              );
+            }
+            if (vJson.contains("normal") && vJson["normal"].is_array() && vJson["normal"].size() >= 3) {
+              v.normal = glm::vec3(
+                vJson["normal"][0].get<float>(),
+                vJson["normal"][1].get<float>(),
+                vJson["normal"][2].get<float>()
+              );
+            } else {
+              v.normal = glm::vec3(0.0f, 1.0f, 0.0f);  // Default normal
+            }
+            if (vJson.contains("uv") && vJson["uv"].is_array() && vJson["uv"].size() >= 2) {
+              v.uv = glm::vec2(
+                vJson["uv"][0].get<float>(),
+                vJson["uv"][1].get<float>()
+              );
+            } else {
+              v.uv = glm::vec2(0.0f, 0.0f);  // Default UV
+            }
+            v.tangent = glm::vec3(0.0f);
+            v.bitangent = glm::vec3(0.0f);
+            vertices.push_back(v);
+          }
+        }
+        
+        // Parse indices
+        if (objJson["indices"].is_array()) {
+          for (const auto& idxJson : objJson["indices"]) {
+            if (idxJson.is_number_unsigned()) {
+              indices.push_back(idxJson.get<unsigned int>());
+            }
+          }
+        }
+        
+        if (!vertices.empty() && !indices.empty()) {
+          // Handle per-face textures if specified
+          if (objJson.contains("faces") && objJson["faces"].is_array()) {
+            // Create multiple objects, one per face group
+            for (const auto& faceJson : objJson["faces"]) {
+              if (!faceJson.is_object() || !faceJson.contains("indices") || !faceJson.contains("texture")) {
+                continue;
+              }
+              
+              // Get face indices
+              std::vector<unsigned int> faceIndices;
+              if (faceJson["indices"].is_array()) {
+                for (const auto& idxJson : faceJson["indices"]) {
+                  if (idxJson.is_number_unsigned()) {
+                    faceIndices.push_back(idxJson.get<unsigned int>());
+                  }
+                }
+              }
+              
+              if (faceIndices.empty()) continue;
+              
+              // Get texture for this face
+              std::string textureName = faceJson["texture"].get<std::string>();
+              std::shared_ptr<Texture> faceTexture = nullptr;
+              
+              // Find texture in textures map
+              if (textures_.find(textureName) != textures_.end()) {
+                faceTexture = textures_[textureName];
+              } else {
+                // Fallback to first texture if not found
+                if (!objectTextures.empty()) {
+                  faceTexture = objectTextures[0];
+                }
+              }
+              
+              if (!faceTexture) continue;
+              
+              // Create mesh input for this face
+              input::MeshInput meshInput;
+              meshInput.vertices = vertices;
+              meshInput.indices = faceIndices;
+              meshInput.name = name + "_face_" + textureName;
+              meshInput.textures["texture1"] = faceTexture;
+              
+              auto faceObject = ObjectGenerator::mesh(meshInput);
+              
+              if (faceObject) {
+                // Build model matrix: M = T * R * S
+                glm::mat4 modelMatrix = glm::mat4(1.0f);
+                
+                // Apply scale (non-uniform if vec3, uniform if single value)
+                modelMatrix = glm::scale(modelMatrix, scaleVec);
+                
+                // Apply rotation (Euler angles in degrees: X, Y, Z)
+                if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
+                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
+                }
+                
+                // Apply translation
+                modelMatrix = glm::translate(modelMatrix, position);
+                
+                faceObject->setModel(modelMatrix);
+                
+                if (material.has_value()) {
+                  faceObject->setMaterial(material.value());
+                }
+                faceObject->setShader(shader);
+                faceObject->visible(visible);
+                
+                // Parse physics for face object
+                if (objJson.contains("physics") && objJson["physics"].is_object()) {
+                  auto physicsJson = objJson["physics"];
+                  bool physicsEnabled = parseBool(physicsJson, "enabled", false);
+                  if (physicsEnabled) {
+                    physics::PhysicsObject physicsObject;
+                    std::string bodyTypeStr = parseString(physicsJson, "bodyType", "STATIC");
+                    
+                    if (bodyTypeStr == "STATIC") {
+                      physicsObject.bodyType = physics::BodyType::STATIC;
+                    } else if (bodyTypeStr == "DYNAMIC") {
+                      physicsObject.bodyType = physics::BodyType::DYNAMIC;
+                    } else if (bodyTypeStr == "KINEMATIC") {
+                      physicsObject.bodyType = physics::BodyType::KINEMATIC;
+                    }
+                    
+                    // For custom geometry, use BOX collider (could be improved to use mesh collider)
+                    physicsObject.colliderType = physics::ColliderType::BOX;
+                    
+                    // Calculate bounding box from vertices
+                    glm::vec3 minPos = vertices[0].position;
+                    glm::vec3 maxPos = vertices[0].position;
+                    for (const auto& v : vertices) {
+                      minPos = glm::min(minPos, v.position);
+                      maxPos = glm::max(maxPos, v.position);
+                    }
+                    physicsObject.boundingBox = (maxPos - minPos) * scale;
+                    
+                    faceObject->physics(physicsObject);
+                  }
+                }
+                
+                scene->add(faceObject);
+              }
+            }
+            // Skip creating a single object since we created multiple face objects
+            continue;
+          } else {
+            // Single object with all textures
+            input::MeshInput meshInput;
+            meshInput.vertices = vertices;
+            meshInput.indices = indices;
+            meshInput.name = name;
+            
+            // Use textures from textures array
+            for (size_t i = 0; i < objectTextures.size(); ++i) {
+              meshInput.textures["texture" + std::to_string(i + 1)] = objectTextures[i];
+            }
+            
+            object = ObjectGenerator::mesh(meshInput);
+            
+            // Set position, rotation, and scale
+            if (object) {
+              // Build model matrix: M = T * R * S (applied in reverse order)
+              glm::mat4 modelMatrix = glm::mat4(1.0f);
+              
+              // Apply translation first (will be applied last in matrix multiplication)
+              modelMatrix = glm::translate(modelMatrix, position);
+              
+              // Apply rotation (Euler angles in degrees: X, Y, Z)
+              if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
+                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis (roll)
+                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis (yaw)
+                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis (pitch)
+              }
+              
+              // Apply scale last (will be applied first in matrix multiplication)
+              modelMatrix = glm::scale(modelMatrix, scaleVec);
+              
+              object->setModel(modelMatrix);
+              
+              if (material.has_value()) {
+                object->setMaterial(material.value());
+              }
+              object->setShader(shader);
+            }
+          }
         }
       }
     } else if (type == "dome") {
@@ -228,8 +448,26 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
     
     if (object) {
       object->visible(visible);
-      if (scale != 1.0f) {
-        object->scale(scale);
+      
+      // Apply rotation and scale if not already applied (for non-mesh objects)
+      if (type != "mesh") {
+        // Build model matrix: M = T * R * S
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        
+        // Apply scale (non-uniform if vec3, uniform if single value)
+        modelMatrix = glm::scale(modelMatrix, scaleVec);
+        
+        // Apply rotation (Euler angles in degrees: X, Y, Z)
+        if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
+          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
+        }
+        
+        // Apply translation
+        modelMatrix = glm::translate(modelMatrix, position);
+        
+        object->setModel(modelMatrix);
       }
       
       // Parse physics

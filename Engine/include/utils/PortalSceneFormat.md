@@ -66,12 +66,74 @@ Array of scene objects:
 - `box`: Cube/box primitive
 - `plane`: Flat plane primitive
 - `container`: Container mesh
-- `mesh`: Custom mesh (requires `meshFile` property)
+- `mesh`: Custom mesh - can be either:
+  - File-based: requires `meshFile` property (e.g., "models/room.obj")
+  - Geometry-based: requires `vertices` and `indices` properties (supports per-face textures)
 - `dome`: Sky dome
 
 ### Mesh Objects
-For `type: "mesh"`, additional properties:
+
+#### File-based Mesh
+For `type: "mesh"` with `meshFile` property:
 - `meshFile`: Path to mesh file (e.g., "models/room.obj")
+
+#### Custom Geometry Mesh
+For `type: "mesh"` with `vertices` and `indices` properties, define geometry manually:
+
+```json
+{
+  "type": "mesh",
+  "name": "room_walls",
+  "position": [0.0, 0.0, 0.0],
+  "scale": 1.0,
+  "textures": ["wall", "floor", "ceiling"],
+  "material": "default",
+  "vertices": [
+    {
+      "position": [0.0, 0.0, 0.0],
+      "normal": [0.0, 1.0, 0.0],
+      "uv": [0.0, 0.0]
+    },
+    {
+      "position": [5.0, 0.0, 0.0],
+      "normal": [0.0, 1.0, 0.0],
+      "uv": [1.0, 0.0]
+    },
+    {
+      "position": [5.0, 0.0, 5.0],
+      "normal": [0.0, 1.0, 0.0],
+      "uv": [1.0, 1.0]
+    }
+  ],
+  "indices": [0, 1, 2, 0, 2, 3],
+  "faces": [
+    {
+      "indices": [0, 1, 2, 0, 2, 3],
+      "texture": "floor"
+    },
+    {
+      "indices": [4, 5, 6, 4, 6, 7],
+      "texture": "wall"
+    }
+  ],
+  "physics": {
+    "enabled": false
+  }
+}
+```
+
+**Custom Geometry Properties:**
+- `vertices`: Array of vertex objects, each with:
+  - `position`: [x, y, z] - Vertex position (required)
+  - `normal`: [x, y, z] - Vertex normal (optional, defaults to [0, 1, 0])
+  - `uv`: [u, v] - Texture coordinates (optional, defaults to [0, 0])
+- `indices`: Array of unsigned integers defining triangles (3 indices per triangle)
+- `faces`: Optional array of face groups, each with:
+  - `indices`: Array of indices for this face group
+  - `texture`: Texture name from textures array to use for this face
+- `textures`: Array of texture names (used if `faces` not specified, or as fallback)
+
+**Note:** If `faces` is specified, the geometry will be split into multiple objects (one per face group) to support different textures. Otherwise, all textures in the `textures` array will be applied to the single object.
 
 ## Portals
 
