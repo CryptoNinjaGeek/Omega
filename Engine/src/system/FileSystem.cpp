@@ -65,6 +65,23 @@ std::optional<std::string> readDiskFile(const std::string &path) {
   return s;
 }
 
+// Binary counterpart of readDiskFile. Returns nullopt on open failure or
+// zero-length file. Kept separate from readDiskFile because binary assets
+// (models, textures) mustn't be read through the text istreambuf iterator
+// which would corrupt null bytes and break eol handling.
+std::optional<omega::system::ByteArray<unsigned char>>
+readDiskBinary(const std::string &path) {
+  std::ifstream in(path, std::ifstream::binary | std::ifstream::ate);
+  if (!in.good()) return std::nullopt;
+  std::streamsize size = in.tellg();
+  if (size <= 0) return std::nullopt;
+  in.seekg(0, std::ios::beg);
+  omega::system::ByteArray<unsigned char> out;
+  out.setSize(static_cast<unsigned int>(size));
+  if (!in.read(reinterpret_cast<char *>(out.data()), size)) return std::nullopt;
+  return out;
+}
+
 }  // namespace
 
 auto FileSystem::string(std::string file) -> std::string {
@@ -144,6 +161,27 @@ auto FileSystem::data(std::string file)
   omega::system::ByteArray<unsigned char> result;
 
   if (file.starts_with(":/")) {
+	// Disk overlay (mirrors FileSystem::string): resources.zip is often
+	// incomplete, so try the on-disk layout first and fall back to the zip.
+	// Candidates match the layouts used by FileSystem::string so text and
+	// binary assets resolve symmetrically.
+	const std::string stripped = file.substr(2);  // drop leading ":/"
+	std::string basename = stripped;
+	if (auto slash = stripped.find_last_of('/');
+	    slash != std::string::npos) {
+	  basename = stripped.substr(slash + 1);
+	}
+	const std::string candidates[] = {
+	    stripped,
+	    "resources/" + stripped,
+	    basename,
+	};
+	for (const auto &c : candidates) {
+	  if (auto disk = readDiskBinary(c)) {
+	    return *disk;
+	  }
+	}
+
 	if (!_zipFiles.contains(file))
 	  return {};
 	auto zip = _zipFiles[file];

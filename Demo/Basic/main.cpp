@@ -21,6 +21,13 @@
 #include <render/SpotLight.h>
 
 #include <utils/ObjectGenerator.h>
+#include <utils/Loader.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
+
+#include <array>
+#include <random>
 
 using namespace omega::geometry;
 using namespace omega::render;
@@ -103,6 +110,7 @@ public:
 	generateCubes();
 	generateContainer();
 	generateGround();
+	generateForest();
 	generateDome();
 
 	_scene->prepare();
@@ -216,6 +224,118 @@ public:
 										   .name = "Cube" + std::to_string(nr++)}));
 	}
 
+  }
+
+  // Walk a loaded ObjectNode tree, stamping a world-space model matrix and
+  // our lit shader onto every mesh. glb/fbx models come out of the loader
+  // with identity model_ on each Object, and Scene doesn't read ObjectNode::mat
+  // at render time — so the per-instance transform has to live on each mesh.
+  void applyTransformAndShader(const ObjectNodePtr& node,
+                                const glm::mat4& world,
+                                const std::shared_ptr<Shader>& sh) {
+	if (!node) return;
+	for (auto& mesh : node->meshes) {
+	  mesh->setModel(world);
+	  mesh->setShader(sh);
+	}
+	for (auto& child : node->children) {
+	  applyTransformAndShader(child, world, sh);
+	}
+  }
+
+  // Load a model once and drop it into the scene at the given pose.
+  // Rotation is a yaw in radians (around Y). Returns true on success.
+  bool placeModel(const std::string& path,
+                  const glm::vec3& position,
+                  float yawRadians,
+                  float scale) {
+	auto tree = Loader::loadModel(path);
+	if (!tree) return false;
+
+	auto world = glm::mat4(1.0f);
+	world = glm::translate(world, position);
+	world = glm::rotate(world, yawRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+	world = glm::scale(world, glm::vec3(scale));
+
+	applyTransformAndShader(tree, world, shader);
+	_scene->add(tree);
+	return true;
+  }
+
+  // Scatter trees and rocks around the ground plane. Placement avoids the
+  // central playground (containers + cubes) and stays inside the 50×50 ground
+  // (size=25 half-extent). Trees come in small clusters to read as natural
+  // copses; a few rocks live at cluster bases with others scattered between.
+  void generateForest() {
+	// Deterministic RNG — we want the layout reproducible run-to-run so you
+	// can tune it; swap seed for std::random_device if you prefer variance.
+	std::mt19937 rng(1337);
+	std::uniform_real_distribution<float> jitter(-2.5f, 2.5f);
+	std::uniform_real_distribution<float> yaw(0.0f, glm::two_pi<float>());
+	std::uniform_real_distribution<float> treeScale(0.7f, 1.25f);
+	std::uniform_real_distribution<float> rockScale(0.35f, 0.95f);
+	std::uniform_int_distribution<int> treeIdx(0, 4);
+	std::uniform_int_distribution<int> rockIdx(0, 2);
+
+	const std::array<const char*, 5> trees = {
+		":/models/tree.glb",
+		":/models/tree-high.glb",
+		":/models/tree-crooked.glb",
+		":/models/tree-high-crooked.glb",
+		":/models/tree-high-round.glb",
+	};
+	const std::array<const char*, 3> rocks = {
+		":/models/rock-small.glb",
+		":/models/rock-wide.glb",
+		":/models/rock-large.glb",
+	};
+
+	// Copse centers — picked around the perimeter so the foreground (where
+	// the cubes/containers sit) stays readable. Each cluster spawns 3-5 trees.
+	struct Copse { glm::vec3 center; int count; };
+	const std::array<Copse, 5> copses = {{
+		{ { -18.0f, 0.0f, -17.0f }, 5 },
+		{ {  18.0f, 0.0f, -14.0f }, 4 },
+		{ { -20.0f, 0.0f,  10.0f }, 4 },
+		{ {  16.0f, 0.0f,  18.0f }, 5 },
+		{ {   0.0f, 0.0f, -22.0f }, 3 },
+	}};
+
+	for (const auto& copse : copses) {
+	  for (int i = 0; i < copse.count; ++i) {
+		glm::vec3 pos = copse.center + glm::vec3(jitter(rng), 0.0f, jitter(rng));
+		// Clamp away from the playground (r < 5 near origin) so we don't
+		// end up with a tree sprouting between the containers.
+		if (glm::length(glm::vec2(pos.x, pos.z)) < 5.0f) continue;
+		placeModel(trees[treeIdx(rng)], pos, yaw(rng), treeScale(rng));
+	  }
+
+	  // Drop a rock or two at the base of each cluster for grounding.
+	  for (int r = 0; r < 2; ++r) {
+		glm::vec3 pos = copse.center + glm::vec3(jitter(rng) * 0.5f, 0.0f,
+		                                         jitter(rng) * 0.5f);
+		placeModel(rocks[rockIdx(rng)], pos, yaw(rng), rockScale(rng));
+	  }
+	}
+
+	// A few lone trees to break up the copse rhythm.
+	const std::array<glm::vec3, 4> lonely = {{
+		{ -12.0f, 0.0f,  20.0f },
+		{  22.0f, 0.0f,   4.0f },
+		{ -22.0f, 0.0f,  -4.0f },
+		{   8.0f, 0.0f, -20.0f },
+	}};
+	for (const auto& p : lonely) {
+	  placeModel(trees[treeIdx(rng)], p, yaw(rng), treeScale(rng));
+	}
+
+	// Scattered rocks between the copses.
+	std::uniform_real_distribution<float> ground(-22.0f, 22.0f);
+	for (int i = 0; i < 6; ++i) {
+	  glm::vec3 pos(ground(rng), 0.0f, ground(rng));
+	  if (glm::length(glm::vec2(pos.x, pos.z)) < 6.0f) { --i; continue; }
+	  placeModel(rocks[rockIdx(rng)], pos, yaw(rng), rockScale(rng));
+	}
   }
 
   void generateGround() {
