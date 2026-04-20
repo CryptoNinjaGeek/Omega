@@ -1,6 +1,5 @@
 #include <system/TextureManager.h>
 #include <render/Texture.h>
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 

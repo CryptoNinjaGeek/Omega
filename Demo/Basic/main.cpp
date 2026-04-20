@@ -61,7 +61,7 @@ public:
 	shader = Shader::fromFile(4,
 							  2,
 							  ":/shaders/core.vs",
-							  "./core.fs");
+							  ":/shaders/core.fs");
 	shader->setInt("texture1", 0);
 	shader->setVec4("ambient", 0.15f, 0.15f, 0.15f, 1.0f);
 

@@ -44,9 +44,16 @@ public:
   glm::vec3 getUp() const { return up_; }
   glm::vec3 getRight() const { return right_; }
 
-  // Linked portal (destination)
+  // Linked portal (destination) - kept for backward compatibility
   void setLinkedPortal(std::shared_ptr<Portal> portal) { linkedPortal_ = portal; }
   std::shared_ptr<Portal> getLinkedPortal() const { return linkedPortal_; }
+
+  // Destination portal (new doorway-based system)
+  void setDestination(std::shared_ptr<Portal> dest) { destination_ = dest; }
+  std::shared_ptr<Portal> getDestination() const { return destination_; }
+
+  // Check if this portal is a mirror (destination == this)
+  bool isMirror() const { return destination_ && destination_.get() == this; }
 
   // Framebuffer for rendering portal view
   void setFramebuffer(std::shared_ptr<render::PortalFramebuffer> fb) {
@@ -63,6 +70,26 @@ public:
   // Portal enabled state
   void setEnabled(bool enabled) { enabled_ = enabled; }
   bool isEnabled() const { return enabled_; }
+
+  // Portal open/closed state (for doors)
+  void setOpen(bool open) { isOpen_ = open; }
+  bool isOpen() const { return isOpen_; }
+
+  // Portal passability (can entities walk through?)
+  void setPassable(bool passable) { isPassable_ = passable; }
+  bool isPassable() const { return isPassable_; }
+
+  // Mirror overlay settings
+  void setMirrorOverlay(bool enabled, float intensity = 0.5f) {
+    hasMirrorOverlay_ = enabled;
+    mirrorIntensity_ = intensity;
+  }
+  bool hasMirrorOverlay() const { return hasMirrorOverlay_; }
+  float getMirrorIntensity() const { return mirrorIntensity_; }
+
+  // Visibility and culling helpers
+  bool isVisibleFrom(const glm::vec3& position) const;
+  glm::vec4 getClippingPlane() const;  // For portal culling
 
   // Check if point is in front of portal
   bool isPointInFront(const glm::vec3& point) const;
@@ -81,11 +108,16 @@ private:
   float width_{2.0f};
   float height_{2.0f};
 
-  std::shared_ptr<Portal> linkedPortal_{nullptr};
+  std::shared_ptr<Portal> linkedPortal_{nullptr};  // Legacy: kept for backward compatibility
+  std::shared_ptr<Portal> destination_{nullptr};   // New: doorway-based destination
   std::shared_ptr<render::PortalFramebuffer> framebuffer_{nullptr};
 
   bool visible_{true};
   bool enabled_{true};
+  bool isOpen_{true};           // Is the doorway open? (for doors)
+  bool isPassable_{true};       // Can entities walk through this portal?
+  bool hasMirrorOverlay_{false}; // Optional mirror effect overlay
+  float mirrorIntensity_{0.5f};  // Mirror overlay intensity (0.0 = transparent, 1.0 = full mirror)
 };
 
 }  // namespace geometry

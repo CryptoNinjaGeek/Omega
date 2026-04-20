@@ -1,9 +1,9 @@
 #include <render/Window.h>
 #include <render/Texture.h>
+#include <system/Log.h>
 
 #include <glad/glad.h>
 #include <chrono>
-#include <iostream>
 #include <GLFW/glfw3.h>
 
 using namespace omega::render;
@@ -294,7 +294,7 @@ void Window::calculateDuration() {
   m_time = duration.count();
 
   if (m_verbose)
-	std::cout << "FPS => " << 1.f/m_deltaTime << std::endl;
+	OMEGA_LOG_TRACE("window", "FPS => {}", 1.f/m_deltaTime);
 }
 
 void Window::processEvents() {
@@ -388,11 +388,11 @@ bool Window::setSize(int width, int height) {
 
 bool Window::initGL() {
   glfwSetErrorCallback([](int, const char *desc) {
-	std::cerr << desc << "\n";
+	OMEGA_LOG_ERROR("window", "GLFW error: {}", desc);
 	std::exit(EXIT_FAILURE);
   });
   if (!glfwInit()) {
-	std::cout << "GLFW failed to Initialize!" << std::endl;
+	OMEGA_LOG_ERROR("window", "GLFW failed to Initialize!");
 	return false;
   }
 
@@ -407,9 +407,8 @@ bool Window::initGL() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   m_window = glfwCreateWindow(m_width, m_height, "Open GL", NULL, NULL);
   if (!m_window) {
-	std::cout
-		<< "Something went Wrong when Creating a Window!\nShutting down ..."
-		<< std::endl;
+	OMEGA_LOG_ERROR("window",
+					"Something went wrong when creating a window. Shutting down ...");
 	glfwTerminate();
 	return false;
   }
@@ -428,14 +427,16 @@ bool Window::initGL() {
   GLenum error = GL_NO_ERROR;
 
   if (m_verbose)
-	std::cout << glGetString(GL_VERSION) << std::endl;
+	OMEGA_LOG_INFO("window", "GL_VERSION = {}",
+				   reinterpret_cast<const char *>(glGetString(GL_VERSION)));
 
   // Initialize clear color
   glClearColor(0.f, 0.f, 0.f, 1.f);
   // Check for error
   error = glGetError();
   if (error!=GL_NO_ERROR) {
-	std::cout << "Error: glClearColor" << std::endl;
+	OMEGA_LOG_ERROR("window", "glClearColor failed with error 0x{:x}",
+					static_cast<unsigned>(error));
 	success = false;
   }
   glViewport(0, 0, m_width, m_height);

@@ -1,9 +1,15 @@
 #include <iostream>
 #include <iso646.h>
+#include <filesystem>
+#include <vector>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #include <geometry/Point3.h>
 #include <render/Window.h>
 #include <system/System.h>
+#include <system/FileSystem.h>
 #include <render/Camera.h>
 #include <render/Shader.h>
 #include <render/Material.h>
@@ -22,26 +28,47 @@ using namespace omega::system;
 using namespace omega::utils;
 using namespace omega::interface;
 using namespace omega::input;
+using namespace omega;  // brings omega::fs into scope, matches the other demos
 
 class MainWindow : public Window {
 public:
   MainWindow() : Window() {
+	// Get the executable directory
+	std::filesystem::path exePath;
+	#ifdef __APPLE__
+		// On macOS, use _NSGetExecutablePath
+		uint32_t size = 0;
+		_NSGetExecutablePath(nullptr, &size);
+		std::vector<char> path(size);
+		_NSGetExecutablePath(path.data(), &size);
+		exePath = std::filesystem::canonical(path.data()).parent_path();
+	#else
+		// On Linux, use /proc/self/exe
+		exePath = std::filesystem::canonical("/proc/self/exe").parent_path();
+	#endif
+
+	// Look for resources.zip in the executable directory
+	std::filesystem::path zipPath = exePath / "resources.zip";
+	if (!std::filesystem::exists(zipPath)) {
+		// Fallback: try Demo directory relative to executable
+		zipPath = exePath.parent_path() / "Demo" / "resources.zip";
+	}
+
+	fs::instance()->add(zipPath.string());
+
 	camera = std::make_shared<Camera>(glm::vec3(1.0f, 0.0f, 3.0f),
 									  glm::vec3(0.0f, 1.0f, 0.0f), -110.f);
 	shader = Shader::fromFile(
-		4, 2, "/Users/cta/Development/personal/Omega/Demo/Basic/vertex_core.vs",
-		"/Users/cta/Development/personal/Omega/Demo/Basic/fragment_core.fs");
+		4, 2, ":/shaders/core.vs",
+		":/shaders/core.fs");
 	shader->setInt("texture1", 0);
 	shader->setVec3("ambient", 0.05f, 0.05f, 0.05f);
 
 	texture1 = std::make_shared<Texture>();
-	texture1->load(
-		"/Users/cta/Development/personal/Omega/Demo/Basic/container2.jpg");
+	texture1->load(":/textures/container2.png");
 
 	texture2 = std::make_shared<Texture>();
-	texture2->load(
-		"/Users/cta/Development/personal/Omega/Demo/Basic/"
-		"container2_specular.png");
+	texture2->load(":/textures/container2_specular.png");
 
 	createLights();
 	generateCubes();

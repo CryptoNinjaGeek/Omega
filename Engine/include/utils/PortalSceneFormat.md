@@ -137,18 +137,65 @@ For `type: "mesh"` with `vertices` and `indices` properties, define geometry man
 
 ## Portals
 
-Array of portal definitions:
+Array of portal definitions. Portals can be defined using either the **legacy PortalPair format** (backward compatible) or the **new doorway-based format**.
+
+### New Doorway-Based Format (Recommended)
+
+```json
+{
+  "id": "doorway_kitchen_living",
+  "type": "doorway",  // "doorway" | "mirror" | "window"
+  "position": [5.0, 1.0, 0.0],
+  "normal": [0, 0, -1],  // Portal facing direction (or use transform)
+  "transform": {  // Optional: alternative to normal
+    "rotation": [0, 90, 0],  // Euler angles in degrees
+    "scale": [1, 1, 1]
+  },
+  "width": 2.0,
+  "height": 3.0,
+  "destination": "doorway_living_kitchen",  // ID of destination portal (or self for mirrors)
+  "passable": true,  // Can entities walk through?
+  "open": true,  // Is the doorway open? (for doors)
+  "mirrorOverlay": false,  // Optional mirror effect overlay
+  "mirrorIntensity": 0.5,  // Mirror overlay intensity (0.0-1.0)
+  "enabled": true,
+  "visible": true,
+  "framebuffer": {
+    "width": 1024,
+    "height": 1024
+  }
+}
+```
+
+**Mirror Portal Example:**
+```json
+{
+  "id": "mirror_bathroom",
+  "type": "mirror",
+  "position": [0.0, 1.5, -2.0],
+  "normal": [0, 0, 1],
+  "width": 1.0,
+  "height": 2.0,
+  "destination": "mirror_bathroom",  // Self-reference = mirror
+  "passable": false,
+  "open": true,
+  "mirrorOverlay": true,
+  "mirrorIntensity": 0.7,
+  "enabled": true,
+  "visible": true
+}
+```
+
+### Legacy PortalPair Format (Backward Compatible)
 
 ```json
 {
   "id": "portal_a",
-  "name": "Portal A",
   "position": [x, y, z],
-  "normal": [0, 0, -1],  // Portal facing direction
-  "up": [0, 1, 0],  // Optional, auto-calculated if omitted
+  "normal": [0, 0, -1],
   "width": 2.0,
   "height": 3.0,
-  "linkedTo": "portal_b",  // ID of linked portal
+  "linkedTo": "portal_b",  // Creates PortalPair (legacy)
   "enabled": true,
   "visible": true,
   "framebuffer": {
@@ -159,16 +206,42 @@ Array of portal definitions:
 ```
 
 ### Portal Properties
-- `id`: Unique identifier (required for linking)
-- `position`: Portal center position
-- `normal`: Portal facing direction (normalized)
-- `up`: Up vector (optional, auto-calculated)
-- `width`: Portal width in world units
-- `height`: Portal height in world units
-- `linkedTo`: ID of portal to link with (creates PortalPair)
-- `enabled`: Whether portal is active
-- `visible`: Whether portal surface is visible
-- `framebuffer`: Framebuffer resolution (optional, defaults to 1024x1024)
+
+**Required:**
+- `id`: Unique identifier (required for linking/destination)
+
+**Position & Orientation:**
+- `position`: [x, y, z] - Portal center position
+- `normal`: [x, y, z] - Portal facing direction (normalized, optional if `transform` is used)
+- `transform`: Object with `rotation` [x, y, z] in degrees (alternative to `normal`)
+
+**Size:**
+- `width`: Portal width in world units (default: 2.0)
+- `height`: Portal height in world units (default: 3.0)
+
+**Connection (choose one):**
+- `destination`: ID of destination portal (new format) - can be self for mirrors
+- `linkedTo`: ID of portal to link with (legacy format, creates PortalPair)
+
+**Portal Type (new format):**
+- `type`: "doorway" | "mirror" | "window" (default: "doorway")
+- `passable`: Whether entities can walk through (default: true)
+- `open`: Whether the doorway is open (default: true)
+- `mirrorOverlay`: Enable mirror effect overlay (default: false)
+- `mirrorIntensity`: Mirror overlay intensity 0.0-1.0 (default: 0.5)
+
+**State:**
+- `enabled`: Whether portal is active (default: true)
+- `visible`: Whether portal surface is visible (default: true)
+
+**Rendering:**
+- `framebuffer`: Object with `width` and `height` (optional, defaults to 1024x1024)
+
+### Portal Types
+
+1. **Doorway Portal**: Connects two different locations (`destination` points to another portal)
+2. **Mirror Portal**: Self-connected portal (`destination` equals `id`) - shows reflected view
+3. **Window Portal**: Non-passable doorway (`passable: false`) - view only
 
 ## Lights
 

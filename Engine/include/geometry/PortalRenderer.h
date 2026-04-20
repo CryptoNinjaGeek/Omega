@@ -11,6 +11,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace omega {
 namespace render {
@@ -46,12 +47,17 @@ public:
                             std::shared_ptr<render::Shader> portalShader = nullptr);
 
   /**
-   * Add a portal pair to be rendered
+   * Add a portal pair to be rendered (legacy: for backward compatibility)
    */
   void addPortalPair(std::shared_ptr<PortalPair> portalPair);
 
   /**
-   * Clear all portal pairs
+   * Add a standalone portal to be rendered (new doorway-based system)
+   */
+  void addPortal(std::shared_ptr<Portal> portal);
+
+  /**
+   * Clear all portal pairs and standalone portals
    */
   void clearPortals();
 
@@ -89,12 +95,49 @@ private:
   bool isPortalVisible(std::shared_ptr<Portal> portal,
                       std::shared_ptr<render::Camera> camera) const;
 
+  /**
+   * Check if portal should be rendered (includes all culling checks)
+   */
+  bool shouldRenderPortal(std::shared_ptr<Portal> portal,
+                         std::shared_ptr<render::Camera> camera,
+                         int recursionDepth) const;
+
+  /**
+   * Render portal view recursively (with recursion tracking)
+   */
+  void renderPortalViewRecursive(std::shared_ptr<Portal> portal,
+                                 std::shared_ptr<Scene> scene,
+                                 std::shared_ptr<render::Camera> playerCamera,
+                                 int recursionDepth);
+
+  // Legacy: PortalPairs for backward compatibility
   std::vector<std::shared_ptr<PortalPair>> portalPairs_;
-  int maxRecursionDepth_{2};
+  
+  // New: Standalone portals (doorway-based system)
+  std::vector<std::shared_ptr<Portal>> portals_;
+
+  int maxRecursionDepth_{3};
   bool enabled_{true};
   
+  // Recursion tracking (prevent infinite loops)
+  std::set<std::shared_ptr<Portal>> activePortals_;
+
   // Cache portal surface objects to avoid recreating each frame
   std::map<std::shared_ptr<Portal>, std::shared_ptr<Object>> portalSurfaces_;
+
+  /**
+   * Portal surface shader, lazily loaded on first use.
+   * Loaded from the canonical paths :/shaders/portal.vs and :/shaders/portal.fs.
+   * The previous multi-path fallback chain has been removed; if the shader
+   * fails to load the portal surface render is skipped and an error logged.
+   */
+  std::shared_ptr<render::Shader> portalShader_;
+
+  /**
+   * Ensure portalShader_ is loaded. Returns the shader (possibly null on
+   * failure). Safe to call repeatedly — subsequent calls are no-ops.
+   */
+  std::shared_ptr<render::Shader> ensurePortalShader();
 };
 
 }  // namespace geometry

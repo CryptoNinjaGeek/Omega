@@ -42,7 +42,13 @@ add_custom_command(TARGET Portal POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/Demo/Resources/shaders/portal.fs
         ${CMAKE_SOURCE_DIR}/bin/portal.fs
-    COMMENT "Copying scene JSON files and portal shaders to bin directory"
+    # core.vs has to ship alongside the demo because the shipped
+    # bin/resources.zip is stale (no clipping-plane uniforms). FileSystem's
+    # `:/` disk overlay picks this file up ahead of the zip.
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/Demo/Resources/shaders/core.vs
+        ${CMAKE_SOURCE_DIR}/bin/core.vs
+    COMMENT "Copying scene JSON files and portal/core shaders to bin directory"
     VERBATIM
 )
 

@@ -44,6 +44,14 @@ public:
 
   ~Shader();
 
+  /**
+   * True if the program is linked and ready for use. Shader::fromFile /
+   * fromString always return a non-null shared_ptr for historical reasons,
+   * so callers that need to detect a failed load (missing file, compile
+   * error, link error) must check isValid() and not just the pointer.
+   */
+  bool isValid() const;
+
   // Set uniform functions
   void use();
   void unuse();

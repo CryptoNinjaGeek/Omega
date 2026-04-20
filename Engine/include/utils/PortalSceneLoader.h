@@ -91,6 +91,12 @@ private:
   std::map<std::string, render::Material> materials_;
   CameraConfig cameraConfig_;
   
+  // Default white texture for objects with materials but no textures
+  std::shared_ptr<render::Texture> defaultWhiteTexture_;
+  
+  // Get or create default white texture
+  std::shared_ptr<render::Texture> getDefaultWhiteTexture();
+  
   // Helper methods for JSON parsing
   glm::vec3 parseVec3(const nlohmann::json& json, const std::string& key, glm::vec3 defaultValue = glm::vec3(0.0f));
   glm::vec4 parseVec4(const nlohmann::json& json, const std::string& key, glm::vec4 defaultValue = glm::vec4(0.0f));

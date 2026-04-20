@@ -1,5 +1,5 @@
 #include <render/PortalFramebuffer.h>
-#include <iostream>
+#include <system/Log.h>
 
 using namespace omega::render;
 
@@ -82,10 +82,10 @@ void PortalFramebuffer::createFramebuffer() {
   valid_ = (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
   if (!valid_) {
-    std::cerr << "ERROR::PORTAL_FRAMEBUFFER:: Framebuffer is not complete!"
-              << std::endl;
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    std::cerr << "Framebuffer status: " << status << std::endl;
+    OMEGA_LOG_ERROR("portal-fb",
+                    "Framebuffer not complete, status=0x{:x}",
+                    static_cast<unsigned>(status));
   }
 
   // Unbind framebuffer

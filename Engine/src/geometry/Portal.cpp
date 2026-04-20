@@ -94,3 +94,23 @@ float Portal::distanceToPlane(const glm::vec3& point) const {
   return glm::dot(toPoint, normal_);
 }
 
+bool Portal::isVisibleFrom(const glm::vec3& position) const {
+  // Check if portal is facing the given position
+  glm::vec3 toPortal = position_ - position;
+  float dot = glm::dot(glm::normalize(toPortal), normal_);
+  
+  // Portal is visible if the position is in front of it (dot < 0 means position is behind portal normal)
+  // Actually, we want to check if portal is facing the position, so dot should be negative
+  // (normal points away from portal, so if position is in front, dot is negative)
+  return dot < 0.0f;
+}
+
+glm::vec4 Portal::getClippingPlane() const {
+  // Clipping plane: normal points away from portal (opposite of portal normal)
+  // This prevents seeing through the back of the portal
+  glm::vec3 planeNormal = -normal_;  // Negative normal (points away from portal)
+  float distance = glm::dot(planeNormal, position_);
+  
+  return glm::vec4(planeNormal, distance);
+}
+

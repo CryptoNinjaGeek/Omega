@@ -1,12 +1,12 @@
 #include <string>
 #include <sstream>
-#include <iostream>
 #include <map>
 #include <vector>
 
 #include <geometry/Scene.h>
 #include <geometry/PortalRenderer.h>
 #include <system/FileSystem.h>
+#include <system/Log.h>
 #include <system/TextureManager.h>
 #include <utils/Loader.h>
 #include <render/Camera.h>
@@ -26,8 +26,8 @@ Scene::Scene(std::string const &path, bool gamma) : gammaCorrection(gamma) {
   physics_world_ = physics_common_.createPhysicsWorld();
 
   auto gravity = physics_world_->getGravity();
-  std::cout << "Gravity: " << gravity.x << " " << gravity.y << " " << gravity.z
-			<< std::endl;
+  OMEGA_LOG_DEBUG("scene", "Gravity: {} {} {}", gravity.x, gravity.y,
+				  gravity.z);
 
   loadModel(path);
 }
@@ -107,6 +107,17 @@ void Scene::render() {
 
 // draws the model, and thus all its meshes
 void Scene::render(std::shared_ptr<render::Camera> camera) {
+  // The clipping plane is a per-frame Scene property pushed by
+  // PortalRenderer before rendering a portal view. We toggle
+  // GL_CLIP_DISTANCE0 once for the whole traversal rather than per-object
+  // so nested scene::render calls (main scene vs portal view) remain
+  // independent and cheap.
+  if (clippingEnabled_) {
+    glEnable(GL_CLIP_DISTANCE0);
+  } else {
+    glDisable(GL_CLIP_DISTANCE0);
+  }
+
   render(_root, camera);
 
   for (auto light : lights_)
@@ -117,11 +128,15 @@ void Scene::render(std::shared_ptr<render::Camera> camera) {
 	auto lines = debugRenderer.getLines();
 
 	for (auto line : lines) {
-	  std::cout << "Line: " << line.point1.x << " " << line.point1.y << " "
-				<< line.point1.z << " " << line.point2.x << " " << line.point2.y
-				<< " " << line.point2.z << std::endl;
+	  OMEGA_LOG_TRACE("scene", "Debug line: ({}, {}, {}) -> ({}, {}, {})",
+					  line.point1.x, line.point1.y, line.point1.z,
+					  line.point2.x, line.point2.y, line.point2.z);
 	}
   }
+
+  // Leave clipping disabled on exit so callers that don't set it (e.g. the
+  // main scene pass right after a portal pass) get unclipped rendering.
+  glDisable(GL_CLIP_DISTANCE0);
 }
 
 void Scene::render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera) {
@@ -129,6 +144,13 @@ void Scene::render(ObjectNodePtr node, std::shared_ptr<render::Camera> camera) {
 	return;
 
   for (auto object : node->meshes) {
+	// Push frame-wide clipping uniforms onto this object's bound shader
+	// before it renders. Safe to set on any core.vs-compatible shader; the
+	// vertex shader ignores the plane when enableClipping is false.
+	if (auto shader = object->shader()) {
+	  shader->setVec4("clippingPlane", clippingPlane_);
+	  shader->setInt("enableClipping", clippingEnabled_ ? 1 : 0);
+	}
 	object->render(camera);
   }
 

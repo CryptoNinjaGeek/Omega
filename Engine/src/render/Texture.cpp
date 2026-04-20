@@ -3,7 +3,7 @@
 #include <system/FileSystem.h>
 
 #include <stb_image.h>
-#include <iostream>
+#include <system/Log.h>
 #include <glad/glad.h>
 using namespace omega::render;
 
@@ -49,7 +49,7 @@ bool Texture::load(const std::string& fileName, const std::string& name) {
 
 	_name = name.empty() ? fileName : name;
   } else {
-	std::cout << "Failed to load texture: " << fileName << std::endl;
+	OMEGA_LOG_ERROR("texture", "Failed to load texture: {}", fileName);
   }
   stbi_image_free(imageInfo.data);
   return true;
@@ -60,4 +60,23 @@ bool Texture::activate(int no) {
   glActiveTexture(GL_TEXTURE0 + no);
   glBindTexture(GL_TEXTURE_2D, m_textureId);
   return true;
+}
+
+std::shared_ptr<Texture> Texture::createWhiteTexture() {
+  auto texture = std::make_shared<Texture>();
+  
+  // Create a 1x1 white texture using OpenGL
+  glGenTextures(1, &texture->m_textureId);
+  glBindTexture(GL_TEXTURE_2D, texture->m_textureId);
+  
+  unsigned char whiteData[4] = {255, 255, 255, 255}; // RGBA white
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whiteData);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  
+  texture->_name = "default_white";
+  
+  return texture;
 }

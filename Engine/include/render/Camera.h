@@ -53,7 +53,16 @@ public:
   auto setLookAt(glm::vec3 lookAt) -> void;
   auto setPerspective(float const &fov, float const &width, float const &height,
 					  float const &near, float const &far) -> void;
-  auto projectionMatrix() -> glm::mat4x4 { return projection_matrix_; }
+  auto projectionMatrix() const -> glm::mat4x4 { return projection_matrix_; }
+
+  /// Field of view angle in degrees (Y axis) — last value passed to setPerspective().
+  auto fov() const -> float { return fov_; }
+  /// Near clipping distance — last value passed to setPerspective().
+  auto nearPlane() const -> float { return near_plane_; }
+  /// Far clipping distance — last value passed to setPerspective().
+  auto farPlane() const -> float { return far_plane_; }
+  /// Viewport aspect ratio (width/height) — derived from setPerspective().
+  auto aspectRatio() const -> float { return aspect_ratio_; }
   glm::mat4x4 calculate_lookAt_matrix(glm::vec3 position, glm::vec3 target,
 									  glm::vec3 worldUp);
   void updateCameraVectors();
@@ -87,6 +96,13 @@ protected:
   glm::vec3 right_;
   glm::vec3 world_up_;
 
+  // Cached perspective parameters (populated by setPerspective). Sensible
+  // defaults so that callers inspecting fov()/nearPlane()/farPlane()/aspectRatio()
+  // before setPerspective has been called still get reasonable numbers.
+  float fov_{ZOOM};
+  float near_plane_{0.1f};
+  float far_plane_{100.0f};
+  float aspect_ratio_{16.0f / 9.0f};
 };
 }  // namespace render
 }  // namespace omega

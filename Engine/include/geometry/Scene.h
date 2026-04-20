@@ -70,6 +70,21 @@ public:
   // Portal rendering support
   void setPortalRenderer(std::shared_ptr<PortalRenderer> renderer) { portalRenderer_ = renderer; }
   std::shared_ptr<PortalRenderer> getPortalRenderer() const { return portalRenderer_; }
+
+  // Clipping-plane state pushed into the mesh shader during Scene::render().
+  //
+  // Set by PortalRenderer before rendering a portal view into its FBO so
+  // geometry behind the destination portal is culled. The plane follows the
+  // engine convention (see Portal::getClippingPlane): plane equation is
+  // `dot(plane.xyz, X) - plane.w = 0`, fragments with gl_ClipDistance[0] >= 0
+  // are kept. When `enabled` is false the clipping plane is inert
+  // (gl_ClipDistance[0] is forced to 1.0 in the vertex shader).
+  void setActiveClippingPlane(const glm::vec4& plane, bool enabled) {
+    clippingPlane_ = plane;
+    clippingEnabled_ = enabled;
+  }
+  glm::vec4 activeClippingPlane() const { return clippingPlane_; }
+  bool isClippingEnabled() const { return clippingEnabled_; }
 private:
   void loadModel(std::string const &path);
   auto prepare(ObjectNodePtr node) -> void;
@@ -100,6 +115,10 @@ protected:
   
   // Portal rendering
   std::shared_ptr<PortalRenderer> portalRenderer_{nullptr};
+
+  // Clipping plane state (see setActiveClippingPlane).
+  glm::vec4 clippingPlane_{0.0f, 1.0f, 0.0f, 0.0f};
+  bool clippingEnabled_{false};
 };
 }  // namespace geometry
 }  // namespace omega

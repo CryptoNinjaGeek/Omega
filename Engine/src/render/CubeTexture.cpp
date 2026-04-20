@@ -1,7 +1,7 @@
 #include <render/CubeTexture.h>
 #include <system/FileSystem.h>
 
-#include <iostream>
+#include <system/Log.h>
 #include <glad/glad.h>
 #include <stb_image.h>
 
@@ -22,8 +22,7 @@ bool CubeTexture::load(input::CubeTextureInput input) {
                    GL_UNSIGNED_BYTE, imageInfo.data);
       stbi_image_free(imageInfo.data);
     } else {
-      std::cout << "Cubemap texture failed to load at path: " << faces[i]
-                << std::endl;
+      OMEGA_LOG_ERROR("texture", "Cubemap face failed to load: {}", faces[i]);
     }
   }
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

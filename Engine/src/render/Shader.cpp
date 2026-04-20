@@ -1,9 +1,9 @@
-#include <iostream>
 #include <fstream>
 #include <string>
 
 #include <render/Shader.h>
 #include <system/FileSystem.h>
+#include <system/Log.h>
 
 #if defined(WIN32)
 #include "GL/glew.h"
@@ -38,7 +38,7 @@ std::string Shader::loadShaderSource(const std::string& fileName) {
 	while (std::getline(in_file, temp))
 	  src += temp + "\n";
   } else {
-	std::cout << "ERROR::SHADER::COULD_NOT_OPEN_FILE: " << fileName << "\n";
+	OMEGA_LOG_ERROR("shader", "Could not open file: {}", fileName);
   }
 
   in_file.close();
@@ -51,6 +51,10 @@ GLuint Shader::loadShaderFromFile(GLenum type, const std::string& fileName) {
 
   GLuint shader = glCreateShader(type);
   std::string str_src = fs::instance()->string(fileName);
+  if (str_src.empty()) {
+	OMEGA_LOG_ERROR("shader", "Could not open file: {}", fileName);
+	return shader;
+  }
   const GLchar *src = str_src.c_str();
   glShaderSource(shader, 1, &src, NULL);
   glCompileShader(shader);
@@ -58,9 +62,7 @@ GLuint Shader::loadShaderFromFile(GLenum type, const std::string& fileName) {
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
   if (!success) {
 	glGetShaderInfoLog(shader, 512, NULL, infoLog);
-	std::cout << "ERROR::SHADER::COULD_NOT_COMPILE_SHADER: " << fileName
-			  << "\n";
-	std::cout << infoLog << "\n";
+	OMEGA_LOG_ERROR("shader", "Compile failed for {}: {}", fileName, infoLog);
   }
 
   return shader;
@@ -78,8 +80,9 @@ GLuint Shader::loadShaderFromString(GLenum type, const std::string& str_src) {
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
   if (!success) {
 	glGetShaderInfoLog(shader, 512, NULL, infoLog);
-	std::cout << "ERROR::SHADER::COULD_NOT_COMPILE_SHADER: " << str_src << "\n";
-	std::cout << infoLog << "\n";
+	OMEGA_LOG_ERROR("shader",
+					"Compile failed for inline source: {}\nsource:\n{}",
+					infoLog, str_src);
   }
 
   return shader;
@@ -104,9 +107,7 @@ void Shader::linkProgram(GLuint vertexShader, GLuint geometryShader,
   glGetProgramiv(this->id, GL_LINK_STATUS, &success);
   if (!success) {
 	glGetProgramInfoLog(this->id, 512, NULL, infoLog);
-	std::cout << "ERROR::SHADER::COULD_NOT_LINK_PROGRAM"
-			  << "\n";
-	std::cout << infoLog << "\n";
+	OMEGA_LOG_ERROR("shader", "Program link failed: {}", infoLog);
   }
 
   glUseProgram(0);
@@ -191,6 +192,13 @@ bool Shader::loadShadersFromFile(const std::string& vertexFile,
   glDeleteShader(geometryShader);
   glDeleteShader(fragmentShader);
   return true;
+}
+
+bool Shader::isValid() const {
+  if (id == 0) return false;
+  GLint linked = GL_FALSE;
+  glGetProgramiv(id, GL_LINK_STATUS, &linked);
+  return linked == GL_TRUE;
 }
 
 // Set uniform functions

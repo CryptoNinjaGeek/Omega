@@ -22,6 +22,8 @@ add_library(oEngine SHARED
         src/geometry/Matrix.cpp
         src/render/Window.cpp
         src/system/System.cpp
+        src/system/Log.cpp
+        include/system/Log.h
         src/render/Shader.cpp
         src/render/Texture.cpp
         src/render/PortalFramebuffer.cpp
@@ -85,6 +87,7 @@ add_library(oEngine SHARED
         src/render/CameraFPS.cpp
         src/render/PortalCamera.cpp
         src/render/PortalViewCamera.cpp
+        src/render/Frustum.cpp
 
         src/geometry/ComplexObject.cpp
         include/geometry/ComplexObject.h
@@ -126,6 +129,7 @@ target_link_libraries(oEngine
         assimp
         reactphysics3d
         nlohmann_json::nlohmann_json
+        spdlog::spdlog
 )
 
 target_compile_definitions(oEngine PRIVATE BUILD_ENGINE_LIB GL_SILENCE_DEPRECATION)

@@ -19,7 +19,7 @@ public:
   PortalCamera() = default;
 
   /**
-   * Calculate view matrix for rendering through a portal
+   * Calculate view matrix for rendering through a portal (legacy: uses source/dest portals)
    * @param playerCamera The player's current camera
    * @param sourcePortal The portal the player is looking through
    * @param destinationPortal The portal that shows the destination view
@@ -29,6 +29,36 @@ public:
       const Camera& playerCamera,
       const geometry::Portal& sourcePortal,
       const geometry::Portal& destinationPortal);
+
+  /**
+   * Calculate view matrix for doorway portal (new doorway-based system)
+   * @param playerCamera The player's current camera
+   * @param portal The portal the player is looking through
+   * @return View matrix for portal rendering
+   */
+  static glm::mat4 calculateDoorwayView(
+      const Camera& playerCamera,
+      const geometry::Portal& portal);
+
+  /**
+   * Calculate view matrix for mirror portal (self-connected)
+   * @param playerCamera The player's current camera
+   * @param portal The mirror portal
+   * @return View matrix for mirror rendering
+   */
+  static glm::mat4 calculateMirrorView(
+      const Camera& playerCamera,
+      const geometry::Portal& portal);
+
+  /**
+   * Unified interface for calculating portal view (automatically detects doorway vs mirror)
+   * @param playerCamera The player's current camera
+   * @param portal The portal to look through
+   * @return View matrix for portal rendering
+   */
+  static glm::mat4 calculatePortalViewUnified(
+      const Camera& playerCamera,
+      const geometry::Portal& portal);
 
   /**
    * Calculate view matrix with clipping plane support
@@ -70,6 +100,22 @@ public:
    * @return Clipping plane equation (normal.x, normal.y, normal.z, distance)
    */
   static glm::vec4 getClippingPlane(const geometry::Portal& portal);
+
+  /**
+   * Check if portal is visible from camera
+   * @param portal The portal to check
+   * @param camera The camera to check visibility from
+   * @return True if portal is visible from camera
+   */
+  static bool isPortalVisible(const geometry::Portal& portal, const Camera& camera);
+
+  /**
+   * Check if portal is in view frustum
+   * @param portal The portal to check
+   * @param camera The camera to check frustum against
+   * @return True if portal is in view frustum
+   */
+  static bool isInViewFrustum(const geometry::Portal& portal, const Camera& camera);
 
 private:
   /**

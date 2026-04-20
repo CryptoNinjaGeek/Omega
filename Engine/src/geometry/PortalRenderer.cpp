@@ -9,6 +9,7 @@
 #include <render/PortalViewCamera.h>
 #include <render/Shader.h>
 #include <render/Texture.h>
+#include <system/Log.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,14 +20,66 @@ using namespace omega::render;
 
 PortalRenderer::PortalRenderer() = default;
 
+std::shared_ptr<Shader> PortalRenderer::ensurePortalShader() {
+  if (portalShader_ && portalShader_->isValid()) {
+    return portalShader_;
+  }
+
+  // Try paths in priority order. The first successful *and valid* load wins.
+  // Priority: resource zip (preferred, ships with the app) → disk relative to
+  // CWD (dev convenience when running from bin/) → resources/ subdir (older
+  // layout still used by some demos).
+  //
+  // Shader::fromFile always returns a non-null shared_ptr even on failure,
+  // so we must check isValid() (which verifies GL_LINK_STATUS) rather than
+  // just the pointer.
+  static const std::pair<const char *, const char *> kCandidates[] = {
+      {":/shaders/portal.vs", ":/shaders/portal.fs"},
+      {"portal.vs", "portal.fs"},
+      {"resources/shaders/portal.vs", "resources/shaders/portal.fs"},
+  };
+
+  for (const auto &[vs, fs] : kCandidates) {
+    std::shared_ptr<Shader> candidate;
+    try {
+      candidate = Shader::fromFile(3, 3, vs, fs);
+    } catch (const std::exception &e) {
+      OMEGA_LOG_WARN("portal", "Portal shader load threw for {}+{}: {}", vs,
+                     fs, e.what());
+      continue;
+    }
+    if (candidate && candidate->isValid()) {
+      OMEGA_LOG_INFO("portal", "Loaded portal shader from {} + {}", vs, fs);
+      portalShader_ = candidate;
+      return portalShader_;
+    }
+  }
+
+  OMEGA_LOG_ERROR(
+      "portal",
+      "Portal shader could not be loaded from any candidate path "
+      "(tried :/shaders/portal.{{vs,fs}}, portal.{{vs,fs}}, "
+      "resources/shaders/portal.{{vs,fs}})");
+  portalShader_.reset();
+  return portalShader_;
+}
+
 void PortalRenderer::addPortalPair(std::shared_ptr<PortalPair> portalPair) {
   if (portalPair && portalPair->isValid()) {
     portalPairs_.push_back(portalPair);
   }
 }
 
+void PortalRenderer::addPortal(std::shared_ptr<Portal> portal) {
+  if (portal) {
+    portals_.push_back(portal);
+  }
+}
+
 void PortalRenderer::clearPortals() {
   portalPairs_.clear();
+  portals_.clear();
+  activePortals_.clear();
 }
 
 void PortalRenderer::renderPortals(std::shared_ptr<Scene> scene,
@@ -36,8 +89,13 @@ void PortalRenderer::renderPortals(std::shared_ptr<Scene> scene,
     return;
   }
 
-  // Render portal views first (to framebuffers)
+  // Clear active portals tracking for this frame
+  activePortals_.clear();
+
+  // Phase 1: Render portal views (back rendering) - BEFORE main scene
   // This happens BEFORE the main scene so we can use the framebuffers when rendering surfaces
+
+  // Legacy: Render PortalPairs (for backward compatibility)
   for (auto& portalPair : portalPairs_) {
     if (!portalPair->isEnabled()) {
       continue;
@@ -51,13 +109,20 @@ void PortalRenderer::renderPortals(std::shared_ptr<Scene> scene,
     }
 
     // Render portal A's view (what you see through portal A)
-    if (isPortalVisible(portalA, playerCamera) && portalA->isEnabled()) {
+    if (shouldRenderPortal(portalA, playerCamera, 0)) {
       renderPortalView(portalA, portalB, scene, playerCamera, 0);
     }
 
     // Render portal B's view (what you see through portal B)
-    if (isPortalVisible(portalB, playerCamera) && portalB->isEnabled()) {
+    if (shouldRenderPortal(portalB, playerCamera, 0)) {
       renderPortalView(portalB, portalA, scene, playerCamera, 0);
+    }
+  }
+
+  // New: Render standalone portals (doorway-based system)
+  for (auto& portal : portals_) {
+    if (shouldRenderPortal(portal, playerCamera, 0)) {
+      renderPortalViewRecursive(portal, scene, playerCamera, 0);
     }
   }
   
@@ -76,13 +141,10 @@ void PortalRenderer::renderPortalSurfaces(std::shared_ptr<Camera> playerCamera,
     return;
   }
 
+  // Phase 2: Render portal surfaces (forward rendering) - AFTER main scene
   // Render portal surfaces AFTER the main scene so they appear on top
-  static bool firstCall = true;
-  if (firstCall) {
-    std::cout << "[Portal] Rendering " << portalPairs_.size() << " portal pair(s)" << std::endl;
-    firstCall = false;
-  }
   
+  // Legacy: Render PortalPair surfaces
   for (auto& portalPair : portalPairs_) {
     if (!portalPair->isEnabled()) {
       continue;
@@ -92,21 +154,18 @@ void PortalRenderer::renderPortalSurfaces(std::shared_ptr<Camera> playerCamera,
     auto portalB = portalPair->getPortalB();
 
     if (portalA && portalA->isVisible() && portalA->isEnabled()) {
-      static int renderCountA = 0;
-      if (renderCountA++ < 5) {
-        glm::vec3 posA = portalA->getPosition();
-        std::cout << "[Portal] Rendering portal A at (" << posA.x << ", " << posA.y << ", " << posA.z << ")" << std::endl;
-      }
       renderPortalSurface(portalA, playerCamera, portalShader);
     }
 
     if (portalB && portalB->isVisible() && portalB->isEnabled()) {
-      static int renderCountB = 0;
-      if (renderCountB++ < 5) {
-        glm::vec3 posB = portalB->getPosition();
-        std::cout << "[Portal] Rendering portal B at (" << posB.x << ", " << posB.y << ", " << posB.z << ")" << std::endl;
-      }
       renderPortalSurface(portalB, playerCamera, portalShader);
+    }
+  }
+
+  // New: Render standalone portal surfaces
+  for (auto& portal : portals_) {
+    if (portal && portal->isVisible() && portal->isEnabled()) {
+      renderPortalSurface(portal, playerCamera, portalShader);
     }
   }
 }
@@ -137,72 +196,72 @@ void PortalRenderer::renderPortalView(std::shared_ptr<Portal> sourcePortal,
   framebuffer->clear(0.2f, 0.5f, 0.8f, 1.0f);  // Blue-green background
 
   // Calculate portal camera view matrix
-  glm::mat4 portalView = PortalCamera::calculatePortalView(
-      *playerCamera, *sourcePortal, *destPortal);
+  // Use unified method if source portal has destination set, otherwise use legacy method
+  glm::mat4 portalView;
+  if (sourcePortal->getDestination()) {
+    portalView = PortalCamera::calculatePortalViewUnified(*playerCamera, *sourcePortal);
+  } else {
+    portalView = PortalCamera::calculatePortalView(
+        *playerCamera, *sourcePortal, *destPortal);
+  }
 
   // Create temporary camera with portal view
   auto portalCamera = std::make_shared<PortalViewCamera>(playerCamera, portalView);
-  
-  // Fix aspect ratio: framebuffer might be square (1024x1024) but window is 16:9
-  // Create a projection matrix that matches the framebuffer's aspect ratio
-  float framebufferAspect = static_cast<float>(framebuffer->getWidth()) / static_cast<float>(framebuffer->getHeight());
-  glm::mat4 baseProjection = playerCamera->projectionMatrix();
-  
-  // Extract FOV and near/far from base projection (assuming perspective)
-  // For perspective matrices, we can extract the FOV from the top component
-  float fov = 45.0f; // Default, will be extracted if possible
-  float nearPlane = 0.1f;
-  float farPlane = 100.0f;
-  
-  // Try to extract from base camera if it's a CameraFPS or similar
-  // For now, create a new projection with correct aspect ratio
-  // We'll use the same FOV as the base camera but adjust aspect
-  portalCamera->setPerspective(45.0f, 
-                               static_cast<float>(framebuffer->getWidth()),
-                               static_cast<float>(framebuffer->getHeight()),
-                               nearPlane, farPlane);
 
-  // Render scene from portal perspective
-  // Note: This renders the scene objects, but NOT portals recursively (to avoid infinite recursion)
-  static int renderCount = 0;
-  if (renderCount++ < 3) {
-    glm::vec3 camPos = portalCamera->position();
-    glm::vec3 playerPos = playerCamera->position();
-    glm::vec3 sourcePos = sourcePortal->getPosition();
-    glm::vec3 destPos = destPortal->getPosition();
-    glm::vec3 camFront = portalCamera->front();
-    glm::mat4 view = portalCamera->viewMatrix();
-    glm::mat4 proj = portalCamera->projectionMatrix();
-    std::cout << "[Portal] Rendering view:" << std::endl;
-    std::cout << "  Player pos: (" << playerPos.x << "," << playerPos.y << "," << playerPos.z << ")" << std::endl;
-    std::cout << "  Source portal pos: (" << sourcePos.x << "," << sourcePos.y << "," << sourcePos.z << ")" << std::endl;
-    std::cout << "  Dest portal pos: (" << destPos.x << "," << destPos.y << "," << destPos.z << ")" << std::endl;
-    std::cout << "  Portal camera pos: (" << camPos.x << "," << camPos.y << "," << camPos.z << ")" << std::endl;
-    std::cout << "  Portal camera front: (" << camFront.x << "," << camFront.y << "," << camFront.z << ")" << std::endl;
-    std::cout << "  Framebuffer size: " << framebuffer->getWidth() << "x" << framebuffer->getHeight() << std::endl;
+  // Mirror the player camera's perspective onto the portal camera. We reuse
+  // the exact FOV/near/far the player is using (via the new accessors added
+  // in Phase 0.2) so that geometry seen through a portal matches the player's
+  // lens; only the aspect ratio is remapped to the framebuffer's dimensions.
+  portalCamera->setPerspective(
+      playerCamera->fov(),
+      static_cast<float>(framebuffer->getWidth()),
+      static_cast<float>(framebuffer->getHeight()),
+      playerCamera->nearPlane(),
+      playerCamera->farPlane());
+
+  // Render scene from portal perspective.
+  // Note: This renders scene objects only. Nested portal recursion is handled
+  // by renderPortalViewRecursive calling back into renderPortalView.
+  {
+    const glm::vec3 camPos = portalCamera->position();
+    const glm::vec3 playerPos = playerCamera->position();
+    const glm::vec3 sourcePos = sourcePortal->getPosition();
+    const glm::vec3 destPos = destPortal->getPosition();
+    OMEGA_LOG_TRACE("portal",
+                    "renderPortalView: player=({},{},{}) src=({},{},{}) "
+                    "dst=({},{},{}) portalCam=({},{},{}) fb={}x{}",
+                    playerPos.x, playerPos.y, playerPos.z, sourcePos.x,
+                    sourcePos.y, sourcePos.z, destPos.x, destPos.y, destPos.z,
+                    camPos.x, camPos.y, camPos.z, framebuffer->getWidth(),
+                    framebuffer->getHeight());
   }
-  
-  // Ensure we're rendering to the framebuffer
-  GLenum err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error before scene render: " << err << std::endl;
-  }
-  
-  // Check framebuffer status
+
+  OMEGA_GL_CHECK("portal/renderPortalView: before scene render");
+
   GLenum fbStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (fbStatus != GL_FRAMEBUFFER_COMPLETE) {
-    std::cerr << "[Portal] Framebuffer not complete! Status: " << fbStatus << std::endl;
-  }
-  
-  scene->render(portalCamera);
-  
-  // Check for errors after rendering
-  err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error after scene render: " << err << std::endl;
+    OMEGA_LOG_ERROR("portal",
+                    "Framebuffer not complete! Status: 0x{:x}",
+                    static_cast<unsigned>(fbStatus));
   }
 
-  // Unbind framebuffer
+  // Enable oblique clipping against the destination portal's plane so that
+  // geometry on the *camera* side of the destination (i.e. between the
+  // portal camera and the destination surface) is discarded — only the
+  // half-space "behind" the destination portal, the room we're peering into,
+  // should fill the FBO. See core.vs for the exact equation and
+  // Portal::getClippingPlane for the encoding.
+  //
+  // Scene::render() toggles GL_CLIP_DISTANCE0 based on this state and pushes
+  // (clippingPlane, enableClipping) into every object's shader as it walks
+  // the tree.
+  const glm::vec4 destPlane = destPortal->getClippingPlane();
+  scene->setActiveClippingPlane(destPlane, true);
+  scene->render(portalCamera);
+  scene->setActiveClippingPlane(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), false);
+
+  OMEGA_GL_CHECK("portal/renderPortalView: after scene render");
+
   framebuffer->unbind();
 }
 
@@ -218,46 +277,13 @@ void PortalRenderer::renderPortalSurface(std::shared_ptr<Portal> portal,
     return;
   }
 
-  // Create portal shader if not provided or if wrong shader type
-  // We need a simple shader, not the complex lighting shader
-  static std::shared_ptr<Shader> defaultPortalShader = nullptr;
-  if (!defaultPortalShader) {
-    // Try loading portal shaders from file system first, then from zip
-    // Try: ./portal.vs + ./portal.fs
-    defaultPortalShader = Shader::fromFile(4, 2, "./portal.vs", "./portal.fs");
-    if (!defaultPortalShader) {
-      // Try: :/shaders/portal.vs + :/shaders/portal.fs
-      defaultPortalShader = Shader::fromFile(4, 2, ":/shaders/portal.vs", ":/shaders/portal.fs");
-    }
-    if (!defaultPortalShader) {
-      // Fallback: try with core.vs if portal.vs doesn't exist
-      defaultPortalShader = Shader::fromFile(4, 2, ":/shaders/core.vs", "./portal.fs");
-      if (!defaultPortalShader) {
-        defaultPortalShader = Shader::fromFile(4, 2, ":/shaders/core.vs", ":/shaders/portal.fs");
-      }
-    }
-    if (defaultPortalShader) {
-      defaultPortalShader->setInt("portalTexture", 0);
-      // Verify shader is valid by checking for GL errors
-      GLenum err = glGetError();
-      if (err != GL_NO_ERROR) {
-        std::cerr << "[Portal] WARNING: GL Error after shader load: " << err << std::endl;
-      }
-      std::cout << "[Portal] Shader loaded successfully" << std::endl;
-    } else {
-      std::cerr << "[Portal] ERROR: Failed to load portal shader!" << std::endl;
-      std::cerr << "[Portal] Tried: ./portal.vs+./portal.fs, :/shaders/portal.vs+:/shaders/portal.fs, and fallbacks" << std::endl;
-      return;  // Can't render without shader
-    }
+  // Use the portal shader owned by the renderer (lazy-loaded on first use).
+  // The passed-in portalShader argument is ignored — the renderer owns its own
+  // shader so consumers don't need to load it themselves.
+  if (!ensurePortalShader()) {
+    return;  // error already logged by ensurePortalShader()
   }
-  
-  // Always use the portal shader, not the mesh shader
-  portalShader = defaultPortalShader;
-
-  if (!portalShader) {
-    std::cerr << "[Portal] ERROR: Portal shader is null!" << std::endl;
-    return;  // Need shader to render portal surface
-  }
+  portalShader = portalShader_;
 
   // Get or create portal surface object
   std::shared_ptr<Object> portalSurface;
@@ -284,136 +310,82 @@ void PortalRenderer::renderPortalSurface(std::shared_ptr<Portal> portal,
   unsigned int count = portalSurface->getCount();
   ObjectType type = portalSurface->getType();
   
-  static int debugRenderCount = 0;
-  if (debugRenderCount++ < 3) {
-    glm::vec3 portalPos = portal->getPosition();
-    glm::mat4 model = portalSurface->getModel();
-    glm::vec3 camPos = playerCamera->position();
-    glm::vec3 portalNormal = portal->getNormal();
-    
-    // Check if camera is in front of portal
-    bool inFront = portal->isPointInFront(camPos);
-    
-    std::cout << "[Portal] Rendering surface: vao=" << vao << ", count=" << count 
-              << ", portalPos=(" << portalPos.x << "," << portalPos.y << "," << portalPos.z << ")"
-              << ", camPos=(" << camPos.x << "," << camPos.y << "," << camPos.z << ")"
-              << ", inFront=" << (inFront ? "YES" : "NO")
-              << ", textureId=" << framebuffer->getColorTexture() << std::endl;
-    
-    // Print model matrix translation
-    std::cout << "[Portal] Model matrix translation: (" << model[3][0] << ", " << model[3][1] << ", " << model[3][2] << ")" << std::endl;
-  }
-  
+  OMEGA_LOG_TRACE("portal",
+                  "renderPortalSurface: vao={} count={} texId={} pos=({},{},{})",
+                  vao, count, framebuffer->getColorTexture(),
+                  portal->getPosition().x, portal->getPosition().y,
+                  portal->getPosition().z);
+
   if (vao == 0 || count == 0) {
-    std::cerr << "[Portal] ERROR: Invalid VAO=" << vao << " or count=" << count << std::endl;
+    OMEGA_LOG_ERROR("portal", "Invalid VAO={} or count={}", vao, count);
     return;
   }
-  
-  if (!portalShader) {
-    std::cerr << "[Portal] ERROR: Portal shader is null!" << std::endl;
-    return;
-  }
-  
-  // Bind framebuffer texture
-  unsigned int textureId = framebuffer->getColorTexture();
+
+  const unsigned int textureId = framebuffer->getColorTexture();
   if (textureId == 0) {
-    std::cerr << "[Portal] ERROR: Framebuffer texture ID is 0!" << std::endl;
+    OMEGA_LOG_ERROR("portal", "Framebuffer texture ID is 0");
     return;
   }
-  
-  // Set up portal shader FIRST - keep it active throughout rendering
+
   portalShader->use();
-  
-  // Check for GL errors after use()
-  GLenum err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error after shader->use(): " << err << std::endl;
-    return;
-  }
-  
-  // Get the currently active program ID
+  OMEGA_GL_CHECK("portal/renderPortalSurface: after shader use");
+
   GLint currentProgram = 0;
   glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
   if (currentProgram == 0) {
-    std::cerr << "[Portal] ERROR: No shader program is active!" << std::endl;
+    OMEGA_LOG_ERROR("portal", "No shader program active after use()");
     return;
   }
-  
-  // Then bind texture and set uniform
+
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, textureId);
-  GLint texLoc = glGetUniformLocation(currentProgram, "portalTexture");
+  const GLint texLoc = glGetUniformLocation(currentProgram, "portalTexture");
   if (texLoc >= 0) {
     glUniform1i(texLoc, 0);
   } else {
-    std::cerr << "[Portal] WARNING: portalTexture uniform not found in shader!" << std::endl;
+    OMEGA_LOG_WARN("portal", "portalTexture uniform not found in shader");
   }
-  
-  // Set matrices directly (bypass setMat4fv which calls unuse)
-  glm::mat4 projection = playerCamera->projectionMatrix();
-  glm::mat4 view = playerCamera->viewMatrix();
-  glm::mat4 model = portalSurface->getModel();
-  
-  GLint projLoc = glGetUniformLocation(currentProgram, "projection");
-  GLint viewLoc = glGetUniformLocation(currentProgram, "view");
-  GLint modelLoc = glGetUniformLocation(currentProgram, "model");
-  
+
+  const glm::mat4 projection = playerCamera->projectionMatrix();
+  const glm::mat4 view = playerCamera->viewMatrix();
+  const glm::mat4 model = portalSurface->getModel();
+
+  const GLint projLoc = glGetUniformLocation(currentProgram, "projection");
+  const GLint viewLoc = glGetUniformLocation(currentProgram, "view");
+  const GLint modelLoc = glGetUniformLocation(currentProgram, "model");
+
   if (projLoc >= 0) {
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
   } else {
-    std::cerr << "[Portal] WARNING: projection uniform not found!" << std::endl;
+    OMEGA_LOG_WARN("portal", "projection uniform not found");
   }
   if (viewLoc >= 0) {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
   } else {
-    std::cerr << "[Portal] WARNING: view uniform not found!" << std::endl;
+    OMEGA_LOG_WARN("portal", "view uniform not found");
   }
   if (modelLoc >= 0) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
   } else {
-    std::cerr << "[Portal] WARNING: model uniform not found!" << std::endl;
+    OMEGA_LOG_WARN("portal", "model uniform not found");
   }
-  
-  // Check for GL errors after setting uniforms
-  err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error after setting uniforms: " << err << std::endl;
-    return;
-  }
-  
-  // Enable depth testing (portals should respect depth)
+
+  OMEGA_GL_CHECK("portal/renderPortalSurface: after setting uniforms");
+
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
-  
-  // Render the portal quad
+
   glBindVertexArray(vao);
-  
-  // Check for GL errors after binding VAO
-  err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error after binding VAO: " << err << std::endl;
-    glBindVertexArray(0);
-    return;
-  }
-  
+  OMEGA_GL_CHECK("portal/renderPortalSurface: after bind VAO");
+
   if (type == ObjectType::Elements) {
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
   } else {
     glDrawArrays(GL_TRIANGLES, 0, count);
   }
   glBindVertexArray(0);
-  
-  // Check for GL errors after rendering
-  err = glGetError();
-  if (err != GL_NO_ERROR) {
-    std::cerr << "[Portal] GL Error after draw: " << err << " (0x" << std::hex << err << std::dec << ")" << std::endl;
-  }
-  
-  // Restore depth testing and writing
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-  
-  // Unbind texture
+  OMEGA_GL_CHECK("portal/renderPortalSurface: after draw");
+
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -423,8 +395,119 @@ bool PortalRenderer::isPortalVisible(std::shared_ptr<Portal> portal,
     return false;
   }
 
-  // Simple visibility check: is camera in front of portal?
-  glm::vec3 cameraPos = camera->position();
-  return portal->isPointInFront(cameraPos);
+  // Use PortalCamera's visibility check (includes facing check and distance)
+  return PortalCamera::isPortalVisible(*portal, *camera);
+}
+
+bool PortalRenderer::shouldRenderPortal(std::shared_ptr<Portal> portal,
+                                       std::shared_ptr<Camera> camera,
+                                       int recursionDepth) const {
+  if (!portal || !camera) {
+    return false;
+  }
+
+  // Check if portal is closed
+  if (!portal->isOpen()) {
+    return false;
+  }
+
+  // Check if portal is enabled
+  if (!portal->isEnabled()) {
+    return false;
+  }
+
+  // Check if portal is visible from camera
+  if (!PortalCamera::isPortalVisible(*portal, *camera)) {
+    return false;
+  }
+
+  // Check if portal is in view frustum
+  if (!PortalCamera::isInViewFrustum(*portal, *camera)) {
+    return false;
+  }
+
+  // Check recursion limit
+  if (recursionDepth >= maxRecursionDepth_) {
+    return false;
+  }
+
+  // Check for infinite loops (portal already being rendered)
+  if (activePortals_.count(portal) > 0) {
+    return false;
+  }
+
+  return true;
+}
+
+void PortalRenderer::renderPortalViewRecursive(std::shared_ptr<Portal> portal,
+                                              std::shared_ptr<Scene> scene,
+                                              std::shared_ptr<Camera> playerCamera,
+                                              int recursionDepth) {
+  if (!portal || !scene || !playerCamera) {
+    return;
+  }
+
+  // Mark portal as being rendered
+  activePortals_.insert(portal);
+
+  // Get destination portal
+  auto dest = portal->getDestination();
+  if (!dest) {
+    // Fallback: use linked portal for backward compatibility
+    dest = portal->getLinkedPortal();
+    if (!dest) {
+      activePortals_.erase(portal);
+      return;  // No destination
+    }
+  }
+
+  // Render portal view
+  renderPortalView(portal, dest, scene, playerCamera, recursionDepth);
+
+  // Recursively render nested portals visible through this portal
+  // Check all portals in the scene (both PortalPairs and standalone)
+  for (auto& nestedPair : portalPairs_) {
+    if (!nestedPair->isEnabled()) {
+      continue;
+    }
+    auto nestedA = nestedPair->getPortalA();
+    auto nestedB = nestedPair->getPortalB();
+    
+    // Skip source and destination portals to avoid immediate loops
+    if (nestedA == portal || nestedA == dest || nestedB == portal || nestedB == dest) {
+      continue;
+    }
+
+    // Create a temporary portal camera for visibility checks
+    glm::mat4 portalView = PortalCamera::calculatePortalViewUnified(*playerCamera, *portal);
+    auto portalCamera = std::make_shared<PortalViewCamera>(playerCamera, portalView);
+
+    // Check nested portals
+    if (nestedA && shouldRenderPortal(nestedA, portalCamera, recursionDepth + 1)) {
+      renderPortalViewRecursive(nestedA, scene, portalCamera, recursionDepth + 1);
+    }
+    if (nestedB && shouldRenderPortal(nestedB, portalCamera, recursionDepth + 1)) {
+      renderPortalViewRecursive(nestedB, scene, portalCamera, recursionDepth + 1);
+    }
+  }
+
+  // Check standalone portals
+  for (auto& nestedPortal : portals_) {
+    // Skip source and destination portals
+    if (nestedPortal == portal || nestedPortal == dest) {
+      continue;
+    }
+
+    // Create a temporary portal camera for visibility checks
+    glm::mat4 portalView = PortalCamera::calculatePortalViewUnified(*playerCamera, *portal);
+    auto portalCamera = std::make_shared<PortalViewCamera>(playerCamera, portalView);
+
+    if (shouldRenderPortal(nestedPortal, portalCamera, recursionDepth + 1)) {
+      renderPortalViewRecursive(nestedPortal, scene, portalCamera, recursionDepth + 1);
+    }
+  }
+
+  // Unmark portal
+  activePortals_.erase(portal);
 }
 

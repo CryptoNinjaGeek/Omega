@@ -1,6 +1,7 @@
 #include <system/FileSystem.h>
-#include <iostream>
+#include <system/Log.h>
 #include <fstream>
+#include <optional>
 
 using namespace omega::fs;
 
@@ -28,19 +29,18 @@ auto FileSystem::addZipFile(std::string file) -> bool {
   int err;
 
   if ((za = zip_open(file.c_str(), 0, &err))==NULL) {
-	std::cout << "Unable to add file => " << file << std::endl;
+	OMEGA_LOG_ERROR("fs", "Unable to add file => {}", file);
 	return false;
   }
 
   if (verbose_)
-	std::cout << "==================" << std::endl;
+	OMEGA_LOG_DEBUG("fs", "==== zip contents ({}) ====", file);
   for (int i = 0; i < zip_get_num_entries(za, 0); i++) {
 	if (zip_stat_index(za, i, 0, &sb)==0 &&
 		!std::string(sb.name).ends_with("/")) {
 	  if (verbose_) {
-		std::cout << "Name: [:/" << sb.name << "] ";
-		std::cout << "Size: " << sb.size << "] ";
-		std::cout << "mtime: [" << (unsigned int)sb.mtime << "] " << std::endl;
+		OMEGA_LOG_DEBUG("fs", "Name=[:/{}] Size={} mtime={}", sb.name, sb.size,
+						static_cast<unsigned int>(sb.mtime));
 	  }
 
 	  _zipFiles[std::string(":/") + sb.name] =
@@ -50,10 +50,55 @@ auto FileSystem::addZipFile(std::string file) -> bool {
   return true;
 }
 
+namespace {
+
+// Try to read a file from disk at `path`. Returns an empty optional if the
+// file doesn't exist, can't be opened, or is empty — an empty file is
+// indistinguishable from "missing" for shader loading and we'd rather keep
+// searching candidate paths than silently load empty source.
+std::optional<std::string> readDiskFile(const std::string &path) {
+  std::ifstream in(path);
+  if (!in.good()) return std::nullopt;
+  std::string s((std::istreambuf_iterator<char>(in)),
+                std::istreambuf_iterator<char>());
+  if (s.empty()) return std::nullopt;
+  return s;
+}
+
+}  // namespace
+
 auto FileSystem::string(std::string file) -> std::string {
   std::string result;
 
   if (file.starts_with(":/")) {
+	// Disk overlay: the shipping `resources.zip` is not always in sync with
+	// the source tree (e.g. portal shaders are missing and core.vs lags).
+	// Let disk files *override* the zip so developers can iterate on shaders
+	// (and other assets) without rebundling a 400 MB archive. Zip remains
+	// the fallback when no overlay exists.
+	//
+	// Layouts tried for `:/shaders/foo.vs`:
+	//   ./shaders/foo.vs            (preserved relative path)
+	//   ./resources/shaders/foo.vs  (older bin/resources/shaders/ layout)
+	//   ./foo.vs                    (flat bin/foo.vs layout — matches how
+	//                                Demo/Portal CMake copies portal.vs)
+	const std::string stripped = file.substr(2);  // drop leading ":/"
+	std::string basename = stripped;
+	if (auto slash = stripped.find_last_of('/');
+	    slash != std::string::npos) {
+	  basename = stripped.substr(slash + 1);
+	}
+	const std::string candidates[] = {
+	    stripped,
+	    "resources/" + stripped,
+	    basename,
+	};
+	for (const auto &c : candidates) {
+	  if (auto disk = readDiskFile(c)) {
+	    return *disk;
+	  }
+	}
+
 	if (!_zipFiles.contains(file))
 	  return {};
 	auto zip = _zipFiles[file];

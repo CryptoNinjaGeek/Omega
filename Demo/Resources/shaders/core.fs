@@ -5,6 +5,9 @@ struct Material {
     sampler2D diffuse;
     sampler2D specular;
     float shininess;
+    vec4 color;        // Material color (RGBA) - tints the texture
+    vec3 diffuseColor;  // Material diffuse color (RGB) - alternative tint
+    float opacity;     // Material opacity (0.0-1.0)
 };
 
 struct DirLight {
@@ -105,13 +108,20 @@ void main()
         }
     }
 
-    FragColor = result;
+    // Apply material opacity to final color
+    FragColor = vec4(result.rgb, result.a * material.opacity);
 }
 
 // calculates the color when using a directional light.
 vec4 CalcAmbientLight()
 {
-    return ambient * texture(material.diffuse, TexCoords);
+    vec4 texColor = texture(material.diffuse, TexCoords);
+    // Apply material color/diffuse tint if available
+    // Use color if alpha > 0.5 (explicitly set), otherwise use diffuseColor
+    vec3 materialTint = (material.color.a > 0.5) ? material.color.rgb : material.diffuseColor;
+    // Blend texture with material color (multiply for tinting effect)
+    vec4 tintedColor = vec4(texColor.rgb * materialTint, texColor.a);
+    return ambient * tintedColor;
 }
 
 // calculates the color when using a directional light.
@@ -124,8 +134,13 @@ vec4 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // combine results
-    vec4 ambientColor = vec4(light.ambient, 1.0) * texture(material.diffuse, TexCoords);
-    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * texture(material.diffuse, TexCoords);
+    vec4 texColor = texture(material.diffuse, TexCoords);
+    // Apply material color/diffuse tint
+    // Use color if alpha > 0.5 (explicitly set), otherwise use diffuseColor
+    vec3 materialTint = (material.color.a > 0.5) ? material.color.rgb : material.diffuseColor;
+    vec4 tintedColor = vec4(texColor.rgb * materialTint, texColor.a);
+    vec4 ambientColor = vec4(light.ambient, 1.0) * tintedColor;
+    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * tintedColor;
 //    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
     return (ambientColor + diffuseColor);// + specular);
 }
@@ -143,9 +158,14 @@ vec4 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
-    vec4 ambientColor = vec4(light.ambient, 1.0) * texture(material.diffuse, TexCoords);
-    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * texture(material.diffuse, TexCoords);
-    vec4 specularColor = vec4(light.specular, 1.0) * spec * texture(material.specular, TexCoords);
+    vec4 texColor = texture(material.diffuse, TexCoords);
+    vec4 specTexColor = texture(material.specular, TexCoords);
+    // Apply material color/diffuse tint
+    vec3 materialTint = (material.color.a > 0.0) ? material.color.rgb : material.diffuseColor;
+    vec4 tintedColor = vec4(texColor.rgb * materialTint, texColor.a);
+    vec4 ambientColor = vec4(light.ambient, 1.0) * tintedColor;
+    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * tintedColor;
+    vec4 specularColor = vec4(light.specular, 1.0) * spec * specTexColor;
     ambientColor *= attenuation;
     diffuseColor *= attenuation;
     specularColor *= attenuation;
@@ -169,9 +189,14 @@ vec4 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     // combine results
-    vec4 ambientColor = vec4(light.ambient, 1.0) * texture(material.diffuse, TexCoords);
-    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * texture(material.diffuse, TexCoords);
-    vec4 specularColor = vec4(light.specular, 1.0) * spec * texture(material.specular, TexCoords);
+    vec4 texColor = texture(material.diffuse, TexCoords);
+    vec4 specTexColor = texture(material.specular, TexCoords);
+    // Apply material color/diffuse tint
+    vec3 materialTint = (material.color.a > 0.0) ? material.color.rgb : material.diffuseColor;
+    vec4 tintedColor = vec4(texColor.rgb * materialTint, texColor.a);
+    vec4 ambientColor = vec4(light.ambient, 1.0) * tintedColor;
+    vec4 diffuseColor = vec4(light.diffuse, 1.0) * diff * tintedColor;
+    vec4 specularColor = vec4(light.specular, 1.0) * spec * specTexColor;
     ambientColor *= attenuation * intensity;
     diffuseColor *= attenuation * intensity;
     specularColor *= attenuation * intensity;

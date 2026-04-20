@@ -97,6 +97,15 @@ auto Camera::setLookAt(glm::vec3 lookAt) -> void {
 auto Camera::setPerspective(float const &fov, float const &width, float const &height,
 							float const &near, float const &far) -> void {
   projection_matrix_ = glm::perspectiveFov(fov, width, height, near, far);
+
+  // Cache parameters for fov()/nearPlane()/farPlane()/aspectRatio() queries.
+  // PortalRenderer (and other systems that need to mirror the player's
+  // projection into a framebuffer) rely on these accessors so they don't have
+  // to reverse-engineer the projection matrix.
+  fov_ = fov;
+  near_plane_ = near;
+  far_plane_ = far;
+  aspect_ratio_ = (height > 0.0f) ? (width / height) : aspect_ratio_;
 }
 
 glm::mat4x4 Camera::calculate_lookAt_matrix(glm::vec3 position, glm::vec3 target,

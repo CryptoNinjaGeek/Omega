@@ -1,12 +1,13 @@
 #include <render/DirectionalLight.h>
 #include <render/Shader.h>
+#include <system/Log.h>
 
 using namespace omega::render;
 
 void DirectionalLight::setup(std::shared_ptr<render::Shader> shader) {
   auto point_no = shader->getLightNumber(type());
   if (point_no == -1) {
-    std::cout << "Light not used because of MAX_POINT limit" << std::endl;
+    OMEGA_LOG_WARN("light", "DirectionalLight dropped: MAX_POINT limit reached");
     return;
   }
   auto no = std::to_string(point_no);
@@ -18,14 +19,10 @@ void DirectionalLight::setup(std::shared_ptr<render::Shader> shader) {
 }
 
 void DirectionalLight::dump() {
-  std::cout << "----------------------" << std::endl;
-  std::cout << "dirLight.direction = " << direction_.x << "," << direction_.y
-            << "," << direction_.z << std::endl;
-  std::cout << "dirLight.ambient" << ambient_.x << "," << ambient_.y << ","
-            << ambient_.z << std::endl;
-  std::cout << "dirLight.diffuse = " << diffuse_.x << "," << diffuse_.y << ","
-            << diffuse_.z << std::endl;
-  std::cout << "dirLight.specular = " << specular_.x << "," << specular_.y
-            << "," << specular_.z << std::endl;
-  std::cout << "dirLight.on = " << 1 << std::endl;
+  OMEGA_LOG_DEBUG("light",
+                  "DirectionalLight: dir=({},{},{}) ambient=({},{},{}) "
+                  "diffuse=({},{},{}) specular=({},{},{}) on=1",
+                  direction_.x, direction_.y, direction_.z, ambient_.x,
+                  ambient_.y, ambient_.z, diffuse_.x, diffuse_.y, diffuse_.z,
+                  specular_.x, specular_.y, specular_.z);
 }

@@ -15,7 +15,7 @@
 
 #include <string>
 #include <sstream>
-#include <iostream>
+#include <system/Log.h>
 
 using namespace omega::utils;
 using namespace omega::render;
@@ -28,7 +28,7 @@ auto Loader::loadModel(std::string path) -> ObjectNodePtr {
   auto tree = std::make_shared<ObjectNode>();
 
   if (bytes.size()==0) {
-	std::cout << "Error loading file => " << path << std::endl;
+	OMEGA_LOG_ERROR("loader", "Error loading file => {}", path);
 	return nullptr;
   }
 
@@ -41,7 +41,7 @@ auto Loader::loadModel(std::string path) -> ObjectNodePtr {
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
 	  !scene->mRootNode)  // if is Not Zero
   {
-	cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << endl;
+	OMEGA_LOG_ERROR("loader", "ASSIMP error: {}", importer.GetErrorString());
 	return nullptr;
   }
 

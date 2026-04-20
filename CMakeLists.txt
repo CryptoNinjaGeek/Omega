@@ -66,6 +66,20 @@ FetchContent_Declare(
         GIT_SHALLOW TRUE
 )
 
+# GoogleTest — only pulled in when OMEGA_BUILD_TESTS is ON (default for the
+# top-level build). Consumers that embed Omega via add_subdirectory can turn
+# this off to skip the fetch.
+option(OMEGA_BUILD_TESTS "Build Omega engine unit tests" ON)
+if(OMEGA_BUILD_TESTS)
+    FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0
+            GIT_SHALLOW TRUE
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+endif()
+
 message(STATUS "${Green} GLFW Should Be Downloaded ${ColourReset}")
 message(STATUS "${Green} GLM Should Be Downloaded ${ColourReset}")
 
@@ -78,6 +92,11 @@ FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(libpng)
 FetchContent_MakeAvailable(spdlog)
 FetchContent_MakeAvailable(json)
+if(OMEGA_BUILD_TESTS)
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+    include(GoogleTest)
+endif()
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -85,3 +104,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
 add_subdirectory(Engine)
 add_subdirectory(Demo)
+if(OMEGA_BUILD_TESTS)
+    add_subdirectory(Engine/tests)
+endif()

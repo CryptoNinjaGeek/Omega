@@ -17,7 +17,8 @@
 #include <nlohmann/json.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
+#include <glad/glad.h>
+#include <system/Log.h>
 
 using namespace omega::utils;
 using namespace omega::geometry;
@@ -27,10 +28,18 @@ using namespace omega::input;
 
 PortalSceneLoader::PortalSceneLoader() = default;
 
+std::shared_ptr<Texture> PortalSceneLoader::getDefaultWhiteTexture() {
+  // Create default white texture lazily using Texture's static factory method
+  if (!defaultWhiteTexture_) {
+    defaultWhiteTexture_ = Texture::createWhiteTexture();
+  }
+  return defaultWhiteTexture_;
+}
+
 std::shared_ptr<Scene> PortalSceneLoader::loadFromFile(const std::string& filePath) {
   auto jsonString = fs::instance()->string(filePath);
   if (jsonString.empty()) {
-    std::cerr << "Failed to load JSON file: " << filePath << std::endl;
+    OMEGA_LOG_ERROR("scene-loader", "Failed to load JSON file: {}", filePath);
     return nullptr;
   }
   return loadFromString(jsonString);
@@ -50,7 +59,8 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
     if (json.contains("version")) {
       std::string version = json["version"];
       if (version != "1.0") {
-        std::cerr << "Warning: JSON version " << version << " may not be fully supported" << std::endl;
+        OMEGA_LOG_WARN("scene-loader",
+                       "JSON version {} may not be fully supported", version);
       }
     }
     
@@ -58,7 +68,7 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
     if (json.contains("scene")) {
       parseScene(json["scene"]);
     } else {
-      std::cerr << "Error: JSON missing 'scene' object" << std::endl;
+      OMEGA_LOG_ERROR("scene-loader", "JSON missing 'scene' object");
       return nullptr;
     }
     
@@ -111,12 +121,23 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
     }
     
     // Create and configure portal renderer if portals exist
-    if (!portalPairs_.empty()) {
+    if (!portalPairs_.empty() || !portals_.empty()) {
       auto portalRenderer = std::make_shared<PortalRenderer>();
+      
+      // Add legacy PortalPairs (for backward compatibility)
       for (auto& portalPair : portalPairs_) {
         portalRenderer->addPortalPair(portalPair);
       }
-      portalRenderer->setMaxRecursionDepth(2);  // Default recursion depth
+      
+      // Add standalone portals (new doorway-based system)
+      for (auto& [id, portal] : portals_) {
+        // Only add portals that have destinations set (new system)
+        if (portal->getDestination()) {
+          portalRenderer->addPortal(portal);
+        }
+      }
+      
+      portalRenderer->setMaxRecursionDepth(3);  // Default recursion depth
       portalRenderer->setEnabled(true);
       scene->setPortalRenderer(portalRenderer);
     }
@@ -126,7 +147,7 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
     
     return scene;
   } catch (const nlohmann::json::exception& e) {
-    std::cerr << "JSON parsing error: " << e.what() << std::endl;
+    OMEGA_LOG_ERROR("scene-loader", "JSON parsing error: {}", e.what());
     return nullptr;
   }
 }
@@ -242,22 +263,25 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
         }
       }
       
-      // Custom geometry mesh (vertices and indices defined in JSON)
-      if (objJson.contains("vertices") && objJson.contains("indices")) {
-        std::vector<Vertex> vertices;
-        std::vector<unsigned int> indices;
-        
-        // Parse vertices
-        if (objJson["vertices"].is_array()) {
-          for (const auto& vJson : objJson["vertices"]) {
-            Vertex v;
-            if (vJson.contains("position") && vJson["position"].is_array() && vJson["position"].size() >= 3) {
-              v.position = glm::vec3(
-                vJson["position"][0].get<float>(),
-                vJson["position"][1].get<float>(),
-                vJson["position"][2].get<float>()
-              );
-            }
+        // Custom geometry mesh (vertices and indices defined in JSON)
+        if (objJson.contains("vertices") && objJson.contains("indices")) {
+          std::vector<Vertex> vertices;
+          std::vector<unsigned int> indices;
+          
+          // Parse vertices and apply scale directly to vertex positions
+          // This ensures the scale is applied correctly regardless of vertex coordinate ranges
+          if (objJson["vertices"].is_array()) {
+            for (const auto& vJson : objJson["vertices"]) {
+              Vertex v;
+              if (vJson.contains("position") && vJson["position"].is_array() && vJson["position"].size() >= 3) {
+                glm::vec3 pos(
+                  vJson["position"][0].get<float>(),
+                  vJson["position"][1].get<float>(),
+                  vJson["position"][2].get<float>()
+                );
+                // Apply scale directly to vertex positions
+                v.position = pos * scaleVec;
+              }
             if (vJson.contains("normal") && vJson["normal"].is_array() && vJson["normal"].size() >= 3) {
               v.normal = glm::vec3(
                 vJson["normal"][0].get<float>(),
@@ -291,11 +315,13 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
         }
         
         if (!vertices.empty() && !indices.empty()) {
-          // Handle per-face textures if specified
+          // Handle per-face textures/materials if specified
           if (objJson.contains("faces") && objJson["faces"].is_array()) {
             // Create multiple objects, one per face group
             for (const auto& faceJson : objJson["faces"]) {
-              if (!faceJson.is_object() || !faceJson.contains("indices") || !faceJson.contains("texture")) {
+              // Face must have indices, and either texture or material
+              if (!faceJson.is_object() || !faceJson.contains("indices") || 
+                  (!faceJson.contains("texture") && !faceJson.contains("material"))) {
                 continue;
               }
               
@@ -311,52 +337,84 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
               
               if (faceIndices.empty()) continue;
               
-              // Get texture for this face
-              std::string textureName = faceJson["texture"].get<std::string>();
+              // Get texture for this face (optional - can use object default textures)
               std::shared_ptr<Texture> faceTexture = nullptr;
+              std::string faceIdentifier = "face";
               
-              // Find texture in textures map
-              if (textures_.find(textureName) != textures_.end()) {
-                faceTexture = textures_[textureName];
-              } else {
-                // Fallback to first texture if not found
-                if (!objectTextures.empty()) {
-                  faceTexture = objectTextures[0];
+              if (faceJson.contains("texture") && faceJson["texture"].is_string()) {
+                std::string textureName = faceJson["texture"].get<std::string>();
+                faceIdentifier = textureName;
+                
+                // Find texture in textures map
+                if (textures_.find(textureName) != textures_.end()) {
+                  faceTexture = textures_[textureName];
+                } else {
+                  OMEGA_LOG_WARN("scene-loader",
+                                 "Face texture '{}' not found", textureName);
                 }
               }
               
-              if (!faceTexture) continue;
+              // If no face-specific texture, use object's default textures
+              if (!faceTexture) {
+                if (!objectTextures.empty()) {
+                  faceTexture = objectTextures[0];
+                } else {
+                  // No texture available - use default white texture (for material-only rendering)
+                  // The shader will multiply this white texture by the material color
+                  faceTexture = getDefaultWhiteTexture();
+                  if (!faceTexture) {
+                    OMEGA_LOG_WARN("scene-loader",
+                                   "Could not create default white texture, skipping face");
+                    continue;
+                  }
+                }
+              }
+              
+              // Get material for this face (optional, overrides object-level material)
+              std::optional<Material> faceMaterial = material;
+              if (faceJson.contains("material") && faceJson["material"].is_string()) {
+                std::string materialName = faceJson["material"].get<std::string>();
+                faceIdentifier = materialName;  // Use material name as identifier
+                
+                // Look up material in materials map
+                if (materials_.find(materialName) != materials_.end()) {
+                  faceMaterial = materials_[materialName];
+                } else {
+                  OMEGA_LOG_WARN("scene-loader",
+                                 "Face material '{}' not found, using object material",
+                                 materialName);
+                }
+              }
               
               // Create mesh input for this face
               input::MeshInput meshInput;
               meshInput.vertices = vertices;
               meshInput.indices = faceIndices;
-              meshInput.name = name + "_face_" + textureName;
+              meshInput.name = name + "_face_" + faceIdentifier;
               meshInput.textures["texture1"] = faceTexture;
               
               auto faceObject = ObjectGenerator::mesh(meshInput);
               
               if (faceObject) {
-                // Build model matrix: M = T * R * S
-                glm::mat4 modelMatrix = glm::mat4(1.0f);
-                
-                // Apply scale (non-uniform if vec3, uniform if single value)
-                modelMatrix = glm::scale(modelMatrix, scaleVec);
-                
-                // Apply rotation (Euler angles in degrees: X, Y, Z)
+                // Build model matrix: M = T * R
+                // Scale is already applied to vertex positions, so we only need translation and rotation
+                glm::mat4 rotationMatrix = glm::mat4(1.0f);
                 if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
-                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
-                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
-                  modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
+                  rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+                  rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+                  rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
                 }
                 
-                // Apply translation
-                modelMatrix = glm::translate(modelMatrix, position);
+                glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+                
+                // Multiply in order: T * R (scale already applied to vertices)
+                glm::mat4 modelMatrix = translationMatrix * rotationMatrix;
                 
                 faceObject->setModel(modelMatrix);
                 
-                if (material.has_value()) {
-                  faceObject->setMaterial(material.value());
+                // Apply face-specific material if available, otherwise use object material
+                if (faceMaterial.has_value()) {
+                  faceObject->setMaterial(faceMaterial.value());
                 }
                 faceObject->setShader(shader);
                 faceObject->visible(visible);
@@ -381,13 +439,15 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
                     physicsObject.colliderType = physics::ColliderType::BOX;
                     
                     // Calculate bounding box from vertices
+                    // Vertices already have scale applied, so use them directly
                     glm::vec3 minPos = vertices[0].position;
                     glm::vec3 maxPos = vertices[0].position;
                     for (const auto& v : vertices) {
                       minPos = glm::min(minPos, v.position);
                       maxPos = glm::max(maxPos, v.position);
                     }
-                    physicsObject.boundingBox = (maxPos - minPos) * scale;
+                    // Vertices already scaled, so bounding box is just the size
+                    physicsObject.boundingBox = (maxPos - minPos);
                     
                     faceObject->physics(physicsObject);
                   }
@@ -412,23 +472,22 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
             
             object = ObjectGenerator::mesh(meshInput);
             
-            // Set position, rotation, and scale
+            // Set position and rotation
+            // Scale is already applied to vertex positions, so we only need translation and rotation
             if (object) {
-              // Build model matrix: M = T * R * S (applied in reverse order)
-              glm::mat4 modelMatrix = glm::mat4(1.0f);
-              
-              // Apply translation first (will be applied last in matrix multiplication)
-              modelMatrix = glm::translate(modelMatrix, position);
-              
-              // Apply rotation (Euler angles in degrees: X, Y, Z)
+              // Build model matrix: M = T * R
+              // Build matrices separately and multiply in correct order
+              glm::mat4 rotationMatrix = glm::mat4(1.0f);
               if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
-                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis (roll)
-                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis (yaw)
-                modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis (pitch)
+                rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+                rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+                rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
               }
               
-              // Apply scale last (will be applied first in matrix multiplication)
-              modelMatrix = glm::scale(modelMatrix, scaleVec);
+              glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+              
+              // Multiply in order: T * R (scale already applied to vertices)
+              glm::mat4 modelMatrix = translationMatrix * rotationMatrix;
               
               object->setModel(modelMatrix);
               
@@ -452,20 +511,20 @@ void PortalSceneLoader::parseObjects(const nlohmann::json& json, Scene* scene,
       // Apply rotation and scale if not already applied (for non-mesh objects)
       if (type != "mesh") {
         // Build model matrix: M = T * R * S
-        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        // Build matrices separately and multiply in correct order
+        glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scaleVec);
         
-        // Apply scale (non-uniform if vec3, uniform if single value)
-        modelMatrix = glm::scale(modelMatrix, scaleVec);
-        
-        // Apply rotation (Euler angles in degrees: X, Y, Z)
+        glm::mat4 rotationMatrix = glm::mat4(1.0f);
         if (rotation.x != 0.0f || rotation.y != 0.0f || rotation.z != 0.0f) {
-          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
-          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
-          modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
+          rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // X-axis
+          rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Y-axis
+          rotationMatrix = glm::rotate(rotationMatrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Z-axis
         }
         
-        // Apply translation
-        modelMatrix = glm::translate(modelMatrix, position);
+        glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+        
+        // Multiply in order: T * R * S
+        glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
         
         object->setModel(modelMatrix);
       }
@@ -518,12 +577,34 @@ void PortalSceneLoader::parsePortals(const nlohmann::json& json) {
     
     std::string id = parseString(portalJson, "id", "");
     if (id.empty()) {
-      std::cerr << "Warning: Portal missing 'id', skipping" << std::endl;
+      OMEGA_LOG_WARN("scene-loader", "Portal missing 'id', skipping");
       continue;
     }
     
+    // Parse position
     auto position = parseVec3(portalJson, "position");
-    auto normal = parseVec3(portalJson, "normal", glm::vec3(0.0f, 0.0f, -1.0f));
+    
+    // Parse normal (legacy) or calculate from transform (new system)
+    glm::vec3 normal = parseVec3(portalJson, "normal", glm::vec3(0.0f, 0.0f, -1.0f));
+    
+    // Parse transform (new system) - if present, use it to calculate normal
+    if (portalJson.contains("transform") && portalJson["transform"].is_object()) {
+      auto transformJson = portalJson["transform"];
+      if (transformJson.contains("rotation") && transformJson["rotation"].is_array()) {
+        auto rotation = parseVec3(transformJson, "rotation");
+        // Convert Euler angles to normal vector
+        // Assuming rotation is in degrees: [pitch, yaw, roll] or [x, y, z]
+        float pitch = glm::radians(rotation.x);
+        float yaw = glm::radians(rotation.y);
+        
+        // Calculate normal from rotation (assuming portal faces -Z by default)
+        normal.x = -sin(yaw) * cos(pitch);
+        normal.y = sin(pitch);
+        normal.z = -cos(yaw) * cos(pitch);
+        normal = glm::normalize(normal);
+      }
+    }
+    
     float width = parseFloat(portalJson, "width", 2.0f);
     float height = parseFloat(portalJson, "height", 3.0f);
     bool enabled = parseBool(portalJson, "enabled", true);
@@ -532,6 +613,17 @@ void PortalSceneLoader::parsePortals(const nlohmann::json& json) {
     auto portal = std::make_shared<Portal>(position, normal, width, height);
     portal->setEnabled(enabled);
     portal->setVisible(visible);
+    
+    // Parse new doorway-based properties
+    std::string type = parseString(portalJson, "type", "doorway");
+    bool passable = parseBool(portalJson, "passable", true);
+    bool open = parseBool(portalJson, "open", true);
+    bool mirrorOverlay = parseBool(portalJson, "mirrorOverlay", false);
+    float mirrorIntensity = parseFloat(portalJson, "mirrorIntensity", 0.5f);
+    
+    portal->setPassable(passable);
+    portal->setOpen(open);
+    portal->setMirrorOverlay(mirrorOverlay, mirrorIntensity);
     
     // Parse framebuffer settings
     if (portalJson.contains("framebuffer") && portalJson["framebuffer"].is_object()) {
@@ -549,28 +641,60 @@ void PortalSceneLoader::parsePortals(const nlohmann::json& json) {
     portals_[id] = portal;
   }
   
-  // Second pass: link portals
+  // Second pass: link portals (support both old and new formats)
   for (const auto& portalJson : json) {
     if (!portalJson.is_object()) continue;
     
     std::string id = parseString(portalJson, "id", "");
+    if (id.empty()) {
+      continue;
+    }
+    
+    if (portals_.find(id) == portals_.end()) {
+      continue;
+    }
+    
+    auto portal = portals_[id];
+    
+    // New format: destination (can be self for mirrors)
+    std::string destinationId = parseString(portalJson, "destination", "");
+    
+    // Legacy format: linkedTo (creates PortalPair)
     std::string linkedTo = parseString(portalJson, "linkedTo", "");
     
-    if (id.empty() || linkedTo.empty()) {
-      continue;
+    if (!destinationId.empty()) {
+      // New doorway-based system
+      if (destinationId == id) {
+        // Self-reference = mirror portal
+        portal->setDestination(portal);
+      } else if (portals_.find(destinationId) != portals_.end()) {
+        // Set destination to another portal
+        portal->setDestination(portals_[destinationId]);
+      } else {
+        OMEGA_LOG_WARN("scene-loader",
+                       "Portal destination '{}' not found for portal '{}'",
+                       destinationId, id);
+      }
+    } else if (!linkedTo.empty()) {
+      // Legacy PortalPair system (for backward compatibility)
+      if (portals_.find(linkedTo) == portals_.end()) {
+        OMEGA_LOG_WARN("scene-loader",
+                       "Portal link failed - portal '{}' or '{}' not found",
+                       id, linkedTo);
+        continue;
+      }
+      
+      auto portalA = portal;
+      auto portalB = portals_[linkedTo];
+      
+      // Also set destination for new system compatibility
+      portalA->setDestination(portalB);
+      portalB->setDestination(portalA);
+      
+      // Create portal pair (legacy)
+      auto pair = std::make_shared<PortalPair>(portalA, portalB);
+      portalPairs_.push_back(pair);
     }
-    
-    if (portals_.find(id) == portals_.end() || portals_.find(linkedTo) == portals_.end()) {
-      std::cerr << "Warning: Portal link failed - portal '" << id << "' or '" << linkedTo << "' not found" << std::endl;
-      continue;
-    }
-    
-    auto portalA = portals_[id];
-    auto portalB = portals_[linkedTo];
-    
-    // Create portal pair
-    auto pair = std::make_shared<PortalPair>(portalA, portalB);
-    portalPairs_.push_back(pair);
   }
 }
 
@@ -660,16 +784,47 @@ void PortalSceneLoader::parseMaterials(const nlohmann::json& json) {
     if (!materialJson.is_object()) continue;
     
     Material material;
+    
+    // Parse shininess
     material.shininess = parseFloat(materialJson, "shininess", 32.0f);
     
-    if (materialJson.contains("diffuse")) {
-      auto diffuse = parseVec4(materialJson, "diffuse");
-      // Material doesn't have diffuse color in current implementation
+    // Parse color (RGBA)
+    if (materialJson.contains("color") && materialJson["color"].is_array()) {
+      auto color = parseVec4(materialJson, "color", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+      material.color = color;
     }
     
+    // Parse diffuse (RGB or RGBA - convert to RGB)
+    if (materialJson.contains("diffuse")) {
+      if (materialJson["diffuse"].is_array()) {
+        auto diffuseArray = materialJson["diffuse"];
+        if (diffuseArray.size() >= 3) {
+          material.diffuse = glm::vec3(
+            diffuseArray[0].get<float>(),
+            diffuseArray[1].get<float>(),
+            diffuseArray[2].get<float>()
+          );
+        }
+        // If color was not set, use diffuse as color (with alpha from opacity or 1.0)
+        if (materialJson.contains("opacity")) {
+          material.color = glm::vec4(material.diffuse, parseFloat(materialJson, "opacity", 1.0f));
+        } else if (!materialJson.contains("color")) {
+          material.color = glm::vec4(material.diffuse, 1.0f);
+        }
+      }
+    }
+    
+    // Parse opacity
+    if (materialJson.contains("opacity")) {
+      material.opacity = parseFloat(materialJson, "opacity", 1.0f);
+      // Update color alpha if color was set
+      material.color.a = material.opacity;
+    }
+    
+    // Parse specular (for future use - currently Material only stores specular texture)
     if (materialJson.contains("specular")) {
-      auto specular = parseVec4(materialJson, "specular");
       // Material doesn't have specular color in current implementation
+      // This could be added in the future if needed
     }
     
     materials_[name] = material;
@@ -694,7 +849,7 @@ void PortalSceneLoader::parseTextures(const nlohmann::json& json) {
     if (texture->load(file, name)) {
       textures_[name] = texture;
     } else {
-      std::cerr << "Warning: Failed to load texture: " << file << std::endl;
+      OMEGA_LOG_WARN("scene-loader", "Failed to load texture: {}", file);
     }
   }
 }

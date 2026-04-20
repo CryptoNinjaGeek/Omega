@@ -20,6 +20,10 @@ public:
   virtual auto activate(int no) -> bool;
 
   auto load(const std::string& fileName, const std::string& name = {}) -> bool;
+  
+  // Create a white 1x1 texture programmatically
+  static std::shared_ptr<Texture> createWhiteTexture();
+  
   auto name() -> std::string { return _name; }
   auto name(const std::string& name) -> void { _name = name; }
 

@@ -38,6 +38,10 @@ public:
   void setMaterial(render::Material material) { material_ = material; }
   void setModel(glm::mat4x4 mat) { model_ = mat; }
   void setShader(std::shared_ptr<render::Shader> shader) { shader_ = shader; }
+  // Read-only access to the bound shader, used by Scene::render to push
+  // frame-wide uniforms (e.g. the portal clipping plane) before the object
+  // sets its own model/view/projection and draws.
+  std::shared_ptr<render::Shader> shader() const { return shader_; }
   void addTexture(std::shared_ptr<render::Texture> texture) {
 	textures_.push_back(texture);
   };
