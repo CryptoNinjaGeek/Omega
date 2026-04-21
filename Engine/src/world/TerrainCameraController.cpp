@@ -5,6 +5,7 @@
 
 #include <render/Camera.h>
 #include <world/Heightmap.h>
+#include <world/PropColliders.h>
 
 namespace omega {
 namespace world {
@@ -57,24 +58,28 @@ glm::vec2 TerrainCameraController::filterHorizontal(
   return isWalkable(desiredXZ) ? desiredXZ : previousXZ;
 }
 
-glm::vec3 TerrainCameraController::resolvePosition(
-    const glm::vec3& previous, const glm::vec2& desiredXZ, float dt) const {
-  const glm::vec2 filteredXZ = filterHorizontal(
-      glm::vec2(previous.x, previous.z), desiredXZ);
-
-  const float groundY = groundHeight(filteredXZ);
+float TerrainCameraController::groundFollowY(
+    float previousY, const glm::vec2& xz, float dt) const {
+  const float groundY = groundHeight(xz);
   const float targetY = groundY + params_.eyeHeight;
 
   // Smooth toward target, then clamp the absolute per-frame delta so a sharp
   // terrain feature doesn't teleport the camera.
   const float alpha = smoothFactor(params_.groundSmoothing, dt);
-  float nextY = previous.y + (targetY - previous.y) * alpha;
+  float nextY = previousY + (targetY - previousY) * alpha;
 
   const float maxStep = std::max(params_.stepHeight, 0.0f);
-  const float delta = nextY - previous.y;
-  if (delta >  maxStep) nextY = previous.y + maxStep;
-  if (delta < -maxStep) nextY = previous.y - maxStep;
+  const float delta = nextY - previousY;
+  if (delta >  maxStep) nextY = previousY + maxStep;
+  if (delta < -maxStep) nextY = previousY - maxStep;
+  return nextY;
+}
 
+glm::vec3 TerrainCameraController::resolvePosition(
+    const glm::vec3& previous, const glm::vec2& desiredXZ, float dt) const {
+  const glm::vec2 filteredXZ = filterHorizontal(
+      glm::vec2(previous.x, previous.z), desiredXZ);
+  const float nextY = groundFollowY(previous.y, filteredXZ, dt);
   return glm::vec3(filteredXZ.x, nextY, filteredXZ.y);
 }
 
@@ -85,7 +90,17 @@ void TerrainCameraController::updateCamera(render::Camera& camera, float dt) {
   // Horizontal filter runs unconditionally: you can't walk through a cliff
   // mid-jump any more than you can while grounded. Y is handled differently
   // depending on whether we're airborne.
-  const glm::vec2 filteredXZ = filterHorizontal(desiredXZ, desiredXZ);
+  glm::vec2 filteredXZ = filterHorizontal(desiredXZ, desiredXZ);
+
+  // Prop-collider push-out. Has to happen AFTER the slope filter (so a sphere
+  // near a cliff doesn't hand the camera back to an unwalkable tile) and
+  // BEFORE ground-follow Y (so the Y we integrate matches the corrected XZ).
+  // `resolveXZ` is a no-op when obstacles_ is empty, so this costs almost
+  // nothing when no props have been wired up.
+  if (obstacles_ && params_.actorRadius > 0.0f) {
+    filteredXZ = obstacles_->resolveXZ(filteredXZ, params_.actorRadius);
+  }
+
   const float groundY = groundHeight(filteredXZ);
   const float floorY = groundY + params_.eyeHeight;
 
@@ -108,10 +123,13 @@ void TerrainCameraController::updateCamera(render::Camera& camera, float dt) {
     return;
   }
 
-  // Grounded path: existing smoothed ground-follow (pure function), writing
-  // the result back onto the camera.
-  const glm::vec3 next = resolvePosition(prev, desiredXZ, dt);
-  camera.setPositon(next);
+  // Grounded path: smoothed ground-follow against the already-pushed XZ.
+  // We deliberately avoid calling `resolvePosition` here because that helper
+  // re-applies `filterHorizontal(previous, desired)` internally, which would
+  // compare prev-vs-post-obstacle-push and potentially revert the push if
+  // the push crosses an unwalkable tile. `groundFollowY` takes an XZ as-is.
+  const float nextY = groundFollowY(prev.y, filteredXZ, dt);
+  camera.setPositon(glm::vec3(filteredXZ.x, nextY, filteredXZ.y));
 }
 
 void TerrainCameraController::requestJump() {

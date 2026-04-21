@@ -58,6 +58,45 @@ class OMEGA_EXPORT Heightmap {
   static std::shared_ptr<Heightmap> load(const std::string& fileName,
                                          HeightmapTransform transform = {});
 
+  // Parameters for procedural island generation. All fields have sensible
+  // defaults so `Heightmap::makeProceduralIsland()` with no args produces
+  // something showable; callers tune the ones they care about via C++20
+  // designated initializers.
+  struct ProceduralIslandParams {
+    // Side length of the square sample grid. 256 is dense enough for gentle
+    // hills on a single screen without making bake time noticeable.
+    int resolution{256};
+
+    // Total world-space span covered by the grid along X and Z (square).
+    // Also used to place the origin so the grid is centred around (0, 0).
+    float horizontalExtent{512.0f};
+
+    // World-space height at normalized sample value 1.0. Samples are in
+    // [0, 1] after generation; verticalScale maps them to world Y.
+    float verticalScale{40.0f};
+
+    // Radius (in samples) of the separable Gaussian pre-pass applied after
+    // generation. 1 softens the highest-frequency detail octave so the
+    // surface reads as rolling hills instead of noise. 0 skips the blur.
+    int blurRadius{1};
+  };
+
+  // Build a heightmap procedurally as a sum-of-sines island with a radial
+  // falloff (samples near the border are pulled down so the result is a
+  // finite island rather than a plane that just ends). Cheap enough to run
+  // once at startup; no on-disk asset required. Returns nullptr if the
+  // params are invalid (e.g. resolution < 2).
+  //
+  // Split into two overloads (rather than a single `= {}` default) because
+  // C++ refuses to evaluate a nested-class aggregate initializer as a
+  // default argument while the enclosing class is still being defined —
+  // the NSDMIs on ProceduralIslandParams aren't considered "complete" yet
+  // at that point. The no-arg overload just forwards a default-constructed
+  // params struct and is the path callers use when they want the defaults.
+  static std::shared_ptr<Heightmap> makeProceduralIsland(
+      const ProceduralIslandParams& params);
+  static std::shared_ptr<Heightmap> makeProceduralIsland();
+
   // Dimensions of the sample grid.
   int width() const { return width_; }
   int height() const { return height_; }

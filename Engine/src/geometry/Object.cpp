@@ -47,28 +47,43 @@ void Object::render(std::shared_ptr<render::Camera> camera) {
   // Set viewPos for lighting calculations
   shader_->setVec3("viewPos", camera->position());
 
-  // Always set material uniforms (required by shader)
-  if (material_) {
-    const auto& mat = material_.value();
-    shader_->setFloat("material.shininess", mat.shininess);
-    // If color alpha is > 0.5, shader will use color.rgb, otherwise
-    // diffuseColor
-    shader_->setVec4("material.color", mat.color.x, mat.color.y, mat.color.z,
-                     mat.color.w);
-    shader_->setVec3("material.diffuseColor", mat.diffuse.x, mat.diffuse.y,
-                     mat.diffuse.z);
-    shader_->setFloat("material.opacity", mat.opacity);
+  // Two mutually exclusive binding paths. When the object has been given a
+  // list of Materials (new PBR-slot path), each Material binds its own
+  // textures and uniforms under "materials[<i>]". Otherwise we fall back to
+  // the legacy single-material + flat texture-array convention that every
+  // existing demo and shader (core.fs, etc.) already expects.
+  if (!materials_.empty()) {
+    for (std::size_t i = 0; i < materials_.size(); ++i) {
+      const std::string prefix = "materials[" + std::to_string(i) + "]";
+      const int firstUnit = static_cast<int>(i) *
+                            render::Material::kApplyUnitCount;
+      materials_[i].apply(*shader_, prefix, firstUnit);
+    }
   } else {
-    // Set defaults if no material (white color, full opacity, no tint)
-    // Set color alpha to 0.0 so shader uses diffuseColor (white = no tint)
-    shader_->setVec4("material.color", 1.0f, 1.0f, 1.0f, 0.0f);
-    shader_->setVec3("material.diffuseColor", 1.0f, 1.0f,
-                     1.0f);  // white = no tint
-    shader_->setFloat("material.opacity", 1.0f);
-    shader_->setFloat("material.shininess", 32.0f);  // Default shininess
-  }
+    // Always set material uniforms (required by shader)
+    if (material_) {
+      const auto& mat = material_.value();
+      shader_->setFloat("material.shininess", mat.shininess);
+      // If color alpha is > 0.5, shader will use color.rgb, otherwise
+      // diffuseColor
+      shader_->setVec4("material.color", mat.color.x, mat.color.y, mat.color.z,
+                       mat.color.w);
+      shader_->setVec3("material.diffuseColor", mat.diffuse.x, mat.diffuse.y,
+                       mat.diffuse.z);
+      shader_->setFloat("material.opacity", mat.opacity);
+    } else {
+      // Set defaults if no material (white color, full opacity, no tint)
+      // Set color alpha to 0.0 so shader uses diffuseColor (white = no tint)
+      shader_->setVec4("material.color", 1.0f, 1.0f, 1.0f, 0.0f);
+      shader_->setVec3("material.diffuseColor", 1.0f, 1.0f,
+                       1.0f);  // white = no tint
+      shader_->setFloat("material.opacity", 1.0f);
+      shader_->setFloat("material.shininess", 32.0f);  // Default shininess
+    }
 
-  for (int no = 0; no < textures_.size(); no++) textures_.at(no)->activate(no);
+    for (int no = 0; no < textures_.size(); no++)
+      textures_.at(no)->activate(no);
+  }
 
   shader_->resetCounters();
   shader_->turnOffLights();

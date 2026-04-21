@@ -26,6 +26,7 @@ add_library(oEngine SHARED
         include/system/Log.h
         src/render/Shader.cpp
         src/render/Texture.cpp
+        src/render/Material.cpp
         src/render/PortalFramebuffer.cpp
         src/other/glad.c
 
@@ -116,6 +117,10 @@ add_library(oEngine SHARED
         src/world/TerrainMeshBuilder.cpp
         include/world/TerrainCameraController.h
         src/world/TerrainCameraController.cpp
+        include/world/Npc.h
+        src/world/Npc.cpp
+        include/world/PropColliders.h
+        src/world/PropColliders.cpp
 )
 
 include_directories(oEngine PUBLIC include)

@@ -37,6 +37,12 @@ add_custom_command(TARGET Outdoor POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/Demo/Resources/shaders/terrain.fs
         ${CMAKE_SOURCE_DIR}/bin/terrain.fs
-    COMMENT "Copying terrain shaders to bin directory"
+    # prop.fs pairs with the core.vs already shipped in resources.zip. The
+    # fragment stage ships via the disk-overlay fallback because repacking
+    # the zip per-build would be overkill for a single shader.
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/Demo/Resources/shaders/prop.fs
+        ${CMAKE_SOURCE_DIR}/bin/prop.fs
+    COMMENT "Copying terrain + prop shaders to bin directory"
     VERBATIM
 )

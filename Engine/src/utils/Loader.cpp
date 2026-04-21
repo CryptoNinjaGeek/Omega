@@ -12,6 +12,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/texture.h>
+#include <assimp/material.h>
 
 #include <string>
 #include <sstream>
@@ -51,18 +52,55 @@ auto Loader::loadModel(std::string path) -> ObjectNodePtr {
   return tree;
 }
 
+auto Loader::loadModelPreTransformed(std::string path) -> ObjectNodePtr {
+  auto bytes = fs::instance()->data(path);
+  auto ext = fs::instance()->extension(path);
+
+  if (bytes.size() == 0) {
+	OMEGA_LOG_ERROR("loader", "Error loading file => {}", path);
+	return nullptr;
+  }
+
+  Assimp::Importer importer;
+  // aiProcess_PreTransformVertices bakes each node's cumulative transform
+  // into its vertex positions and promotes every mesh to the (single) root
+  // node. Combined with Triangulate + normal/tangent generation this gives
+  // us a flat, render-ready tree suitable for the NPC system.
+  const aiScene *scene = importer.ReadFileFromMemory(
+	  bytes.data(), bytes.size(),
+	  aiProcess_Triangulate | aiProcess_GenSmoothNormals |
+		  aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices,
+	  ext.c_str());
+
+  if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
+	  !scene->mRootNode) {
+	OMEGA_LOG_ERROR("loader", "ASSIMP error (pre-xform): {}",
+					importer.GetErrorString());
+	return nullptr;
+  }
+
+  return processNode(scene->mRootNode, scene);
+}
+
 auto Loader::processNode(aiNode *node, const aiScene *scene) -> ObjectNodePtr {
   auto tree = std::make_shared<ObjectNode>();
 
-  // process each mesh located at the current node
-  glm::mat4x4 mat(node->mTransformation.a1, node->mTransformation.b1,
-				  node->mTransformation.c3, node->mTransformation.d1,
-				  node->mTransformation.a2, node->mTransformation.b2,
-				  node->mTransformation.c2, node->mTransformation.d2,
-				  node->mTransformation.a3, node->mTransformation.b3,
-				  node->mTransformation.c3, node->mTransformation.d3,
-				  node->mTransformation.a4, node->mTransformation.b4,
-				  node->mTransformation.c4, node->mTransformation.d4);
+  // Convert the node's transform from Assimp (row-major: aN, bN, cN, dN are
+  // row 1..4 of column N) to glm (column-major, constructor takes columns in
+  // order). The naive per-element layout is:
+  //   col 0 = (a1, b1, c1, d1)   col 1 = (a2, b2, c2, d2)
+  //   col 2 = (a3, b3, c3, d3)   col 3 = (a4, b4, c4, d4)
+  //
+  // Historical note: the original open-coded constructor here had `c3`
+  // spelled in place of `c1` on column 0, which produced a shear that baked
+  // x into z for every loaded mesh. The NPC system sees that shear as the
+  // silhouette appearing to warp whenever the animal rotates. Keep the
+  // explicit column-wise form below so that bug cannot come back.
+  const auto& t = node->mTransformation;
+  glm::mat4x4 mat(t.a1, t.b1, t.c1, t.d1,   // column 0
+                  t.a2, t.b2, t.c2, t.d2,   // column 1
+                  t.a3, t.b3, t.c3, t.d3,   // column 2
+                  t.a4, t.b4, t.c4, t.d4);  // column 3
 
   tree->mat = mat;
 
@@ -173,6 +211,7 @@ shared_ptr<Object> Loader::processMesh(std::string name, aiMesh *mesh,
   // 1. diffuse maps
   auto diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE,
 										  "texture_diffuse");
+  const bool hasDiffuseTexture = !diffuseMaps.empty();
   textures.merge(diffuseMaps);
   // 2. specular maps
   auto specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR,
@@ -187,11 +226,55 @@ shared_ptr<Object> Loader::processMesh(std::string name, aiMesh *mesh,
 	  loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
   textures.merge(heightMaps);
 
+  // Material colour — Blinn-Phong diffuse first, glTF PBR base-colour as a
+  // fallback. Many of the assets we load through this path (notably Kenney's
+  // animal GLBs) encode per-part tint as `baseColorFactor` with no diffuse
+  // image, so without this read the mesh has nothing to sample and the
+  // prop.fs / core.fs shaders collapse it to black. We keep alpha — the
+  // Blinn-Phong shader path in Object::render treats alpha > 0.5 as "use
+  // the explicit `material.color` tint" which is exactly what we want.
+  aiColor4D matColor(1.0f, 1.0f, 1.0f, 1.0f);
+  bool haveMaterialColor = false;
+  if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &matColor) ==
+	  AI_SUCCESS) {
+	haveMaterialColor = true;
+  } else if (aiGetMaterialColor(material, AI_MATKEY_BASE_COLOR, &matColor) ==
+			 AI_SUCCESS) {
+	haveMaterialColor = true;
+  }
+
   // return a mesh object created from the extracted mesh data
   auto object = utils::ObjectGenerator::mesh({.vertices = vertices,
 												 .indices = indices,
 												 .textures = textures,
 												 .name = name});
+
+  if (object && haveMaterialColor) {
+	render::Material m;
+	// Force alpha = 1.0 so the Object::render path routes through the
+	// `material.color` branch of core.fs / prop.fs (both shaders use
+	// `color.a > 0.5` as the selector between `color.rgb` and the
+	// `diffuseColor` fallback).
+	m.color = glm::vec4(matColor.r, matColor.g, matColor.b, 1.0f);
+	m.diffuse = glm::vec3(matColor.r, matColor.g, matColor.b);
+	m.opacity = matColor.a > 0.0f ? matColor.a : 1.0f;
+	object->setMaterial(m);
+  }
+
+  // When the source material had no diffuse texture file, bind the cached
+  // 1x1 white Texture at unit 0. Both core.fs and prop.fs sample
+  // `material.diffuse` unconditionally; an unbound GL_TEXTURE0 returns
+  // zeros on most drivers, which multiplies the tint to black. A white
+  // fallback makes the colour tint the actual shade of the mesh and
+  // leaves the textured path (trees, rocks) untouched.
+  if (object && !hasDiffuseTexture) {
+	const auto existing = object->getTextures();
+	std::vector<std::shared_ptr<render::Texture>> withWhite;
+	withWhite.reserve(existing.size() + 1);
+	withWhite.push_back(render::Texture::defaultWhite());
+	for (const auto& t : existing) withWhite.push_back(t);
+	object->setTextures(withWhite);
+  }
 
   return object;
 }

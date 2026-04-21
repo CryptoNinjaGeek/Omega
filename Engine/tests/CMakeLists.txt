@@ -19,6 +19,7 @@ add_executable(oEngineTests
         HeightmapTest.cpp
         TerrainMeshBuilderTest.cpp
         TerrainCameraControllerTest.cpp
+        PropCollidersTest.cpp
 )
 
 target_link_libraries(oEngineTests

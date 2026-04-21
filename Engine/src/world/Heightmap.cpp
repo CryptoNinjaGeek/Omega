@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 
+#include <glm/gtc/constants.hpp>
+
 #include <stb_image.h>
 
 #include <system/FileSystem.h>
@@ -24,6 +26,50 @@ float clampUv(float v) {
   if (v < 0.0f) return 0.0f;
   if (v > 1.0f) return 1.0f;
   return v;
+}
+
+// --- Procedural-island helpers ---------------------------------------------
+// These back Heightmap::makeProceduralIsland. They're file-local because no
+// other Heightmap method needs them and they encode a specific terrain look
+// (sum-of-sines + radial falloff) rather than a general primitive.
+
+// Island falloff: samples near the border are pulled down so the result
+// reads as a finite island rather than a plane that just ends. Keeping it
+// analytic (smoothstep on normalized radius) avoids another texture
+// dependency at generation time.
+float islandFalloff(float u, float v) {
+  const float dx = u - 0.5f;
+  const float dz = v - 0.5f;
+  const float r = std::sqrt(dx * dx + dz * dz) * 2.0f;  // 0 centre → 1 edge
+  // Start pulling down at r=0.75, reach zero by r=1. The inner 75% of the
+  // radius is unaffected, so the centre of the map stays hilly.
+  return 1.0f - glm::smoothstep(0.75f, 1.0f, r);
+}
+
+// Sum-of-sines proc-gen. Cheap, deterministic, produces something that
+// reads as natural rolling terrain without shipping an asset. Values are
+// clamped to [0, 1] so the downstream HeightmapTransform can map them to
+// world space with a single multiply.
+float proceduralHeightAt(float u, float v) {
+  const float twoPi = glm::two_pi<float>();
+
+  const float low =
+      0.5f + 0.5f * std::sin((u * 1.7f + v * 2.1f) * twoPi);
+  const float mid =
+      0.5f + 0.5f * std::sin((u * 3.3f - v * 2.6f) * twoPi + 1.2f);
+  const float high =
+      0.5f + 0.5f * std::sin((u * 6.1f + v * 5.4f) * twoPi + 2.8f);
+  const float detail =
+      0.5f + 0.5f * std::sin((u * 13.0f + v * 11.0f) * twoPi + 0.4f);
+
+  // Weighted sum. The detail octave barely contributes but stops the
+  // surface from looking too smooth at grazing angles.
+  float h = 0.55f * low + 0.28f * mid + 0.12f * high + 0.05f * detail;
+  h *= islandFalloff(u, v);
+
+  if (h < 0.0f) h = 0.0f;
+  if (h > 1.0f) h = 1.0f;
+  return h;
 }
 
 }  // namespace
@@ -78,6 +124,57 @@ std::shared_ptr<Heightmap> Heightmap::load(const std::string& fileName,
 
   return std::make_shared<Heightmap>(std::move(samples), width, height,
                                      transform);
+}
+
+std::shared_ptr<Heightmap> Heightmap::makeProceduralIsland(
+    const ProceduralIslandParams& params) {
+  if (params.resolution < 2) {
+    OMEGA_LOG_ERROR("heightmap",
+                    "makeProceduralIsland: resolution must be >= 2 (got {})",
+                    params.resolution);
+    return nullptr;
+  }
+
+  const int n = params.resolution;
+  std::vector<float> samples(static_cast<size_t>(n) * n);
+  const float invN1 = 1.0f / static_cast<float>(n - 1);
+  for (int z = 0; z < n; ++z) {
+    const float v = static_cast<float>(z) * invN1;
+    for (int x = 0; x < n; ++x) {
+      const float u = static_cast<float>(x) * invN1;
+      samples[static_cast<size_t>(z) * n + x] = proceduralHeightAt(u, v);
+    }
+  }
+
+  // Centre the grid on world (0, 0) and map the normalized [0,1]² samples
+  // onto the requested horizontal span.
+  HeightmapTransform transform;
+  transform.origin = glm::vec2(-0.5f * params.horizontalExtent,
+                               -0.5f * params.horizontalExtent);
+  transform.horizontalScale = params.horizontalExtent;
+  transform.verticalScale = params.verticalScale;
+  transform.verticalOffset = 0.0f;
+
+  auto heightmap =
+      std::make_shared<Heightmap>(std::move(samples), n, n, transform);
+
+  // Optional blur pre-pass: smooths out the highest-frequency detail octave
+  // so the surface reads as rolling hills. Blur is cheap at bake time and
+  // never runs per-frame.
+  if (params.blurRadius >= kMinBlurRadius) {
+    heightmap->gaussianBlur(params.blurRadius);
+  }
+  return heightmap;
+}
+
+// No-arg convenience overload. See the header comment on the two-overload
+// split: we can't spell this as `= {}` on the declaration because C++ won't
+// let a nested-class aggregate initializer land as a default argument in the
+// same class body. Defining it out-of-line here is fine because
+// `ProceduralIslandParams` is fully complete by the point this definition is
+// parsed.
+std::shared_ptr<Heightmap> Heightmap::makeProceduralIsland() {
+  return makeProceduralIsland(ProceduralIslandParams{});
 }
 
 int Heightmap::clampX(int x) const {

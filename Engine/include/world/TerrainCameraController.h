@@ -31,6 +31,7 @@ class Camera;
 namespace world {
 
 class Heightmap;
+class PropColliderSet;
 
 struct TerrainCameraParams {
   // Offset from the terrain surface up to the camera's eye. 1.7 m is roughly
@@ -65,6 +66,13 @@ struct TerrainCameraParams {
   // responsive rather than floaty — standard platformer tuning. Drop to
   // 9.81 for a "moon gravity" feel.
   float gravity{20.0f};
+
+  // Horizontal actor radius used when pushing the camera out of obstacle
+  // spheres stored in the attached PropColliderSet. A person is roughly
+  // 0.3–0.4 m wide at the shoulders; we go a touch larger so the camera stops
+  // before clipping the outer silhouette of a trunk. Set to 0 (together with
+  // leaving obstacles unset) to disable prop collision entirely.
+  float actorRadius{0.4f};
 };
 
 class OMEGA_EXPORT TerrainCameraController {
@@ -124,8 +132,28 @@ class OMEGA_EXPORT TerrainCameraController {
   // observe the state machine; gameplay code shouldn't need to consult it.
   bool isAirborne() const { return airborne_; }
 
+  // Attach (or detach with nullptr) the set of static sphere obstacles to
+  // push the camera out of each frame. `updateCamera` queries the set after
+  // applying the terrain slope filter but before integrating ground-follow
+  // Y, so an obstacle that overlaps the camera never produces a single-frame
+  // "walked through it" visible position. The controller keeps a shared_ptr
+  // so the caller does not have to guarantee lifetime separately.
+  void setObstacles(std::shared_ptr<const PropColliderSet> obstacles) {
+    obstacles_ = std::move(obstacles);
+  }
+  const std::shared_ptr<const PropColliderSet>& obstacles() const {
+    return obstacles_;
+  }
+
  private:
+  // Ground-follow Y from a (possibly already-filtered / already-pushed) XZ.
+  // Pulled out of `resolvePosition` so `updateCamera` can call it after the
+  // prop-collider pass without the inner slope filter silently reverting the
+  // push. Pure: no state mutation.
+  float groundFollowY(float previousY, const glm::vec2& xz, float dt) const;
+
   std::shared_ptr<const Heightmap> heightmap_;
+  std::shared_ptr<const PropColliderSet> obstacles_;
   TerrainCameraParams params_;
 
   // Ballistic jump state. `verticalVelocity_` is integrated under
