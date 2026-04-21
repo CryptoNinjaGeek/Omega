@@ -1,0 +1,3078 @@
+{
+  "version": "1.0",
+  "scene": {
+    "name": "Castle Labyrinth POC",
+    "_doc": "16 rooms (4x4) connected via through-portal doorways. Rooms are physically separated in world space; the portal math is the only thing that moves you between them. Start in r00 (bottom-left). Doorway ids beginning 'closed_' start shut \u2014 cycle & toggle them with the O key.",
+    "camera": {
+      "position": [
+        0.0,
+        1.5,
+        0.0
+      ],
+      "yaw": -90.0,
+      "pitch": 0.0
+    },
+    "ambient": [
+      0.35,
+      0.35,
+      0.35,
+      1.0
+    ],
+    "textures": {
+      "floor_stone": {
+        "file": ":/castle/textures/floor_stone.png",
+        "type": "diffuse"
+      },
+      "floor_stone_pattern": {
+        "file": ":/castle/textures/floor_stone_pattern.png",
+        "type": "diffuse"
+      },
+      "floor_tiles_tan_large": {
+        "file": ":/castle/textures/floor_tiles_tan_large.png",
+        "type": "diffuse"
+      },
+      "floor_wood_planks": {
+        "file": ":/castle/textures/floor_wood_planks.png",
+        "type": "diffuse"
+      },
+      "wall_brick_sand_center": {
+        "file": ":/castle/textures/wall_brick_sand_center.png",
+        "type": "diffuse"
+      },
+      "wall_brick_stone_center": {
+        "file": ":/castle/textures/wall_brick_stone_center.png",
+        "type": "diffuse"
+      },
+      "wall_rock": {
+        "file": ":/castle/textures/wall_rock.png",
+        "type": "diffuse"
+      },
+      "wall_rock_structure": {
+        "file": ":/castle/textures/wall_rock_structure.png",
+        "type": "diffuse"
+      },
+      "wall_stone": {
+        "file": ":/castle/textures/wall_stone.png",
+        "type": "diffuse"
+      },
+      "wall_timber": {
+        "file": ":/castle/textures/wall_timber.png",
+        "type": "diffuse"
+      },
+      "wall_timber_structure": {
+        "file": ":/castle/textures/wall_timber_structure.png",
+        "type": "diffuse"
+      }
+    },
+    "materials": {
+      "default": {
+        "shininess": 32.0
+      },
+      "metal": {
+        "shininess": 128.0
+      }
+    },
+    "objects": [
+      {
+        "type": "plane",
+        "name": "r00_floor",
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r00_ceiling",
+        "position": [
+          0.0,
+          4.0,
+          0.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r00_wall_N",
+        "position": [
+          0.0,
+          2.0,
+          -4.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r00_wall_S",
+        "position": [
+          0.0,
+          2.0,
+          4.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r00_wall_E",
+        "position": [
+          4.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r00_wall_W",
+        "position": [
+          -4.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_floor",
+        "position": [
+          40.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone_pattern"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_ceiling",
+        "position": [
+          40.0,
+          4.0,
+          0.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_wall_N",
+        "position": [
+          40.0,
+          2.0,
+          -4.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_wall_S",
+        "position": [
+          40.0,
+          2.0,
+          4.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_wall_E",
+        "position": [
+          44.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r10_wall_W",
+        "position": [
+          36.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_floor",
+        "position": [
+          80.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_tiles_tan_large"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_ceiling",
+        "position": [
+          80.0,
+          4.0,
+          0.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_wall_N",
+        "position": [
+          80.0,
+          2.0,
+          -4.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_wall_S",
+        "position": [
+          80.0,
+          2.0,
+          4.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_wall_E",
+        "position": [
+          84.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r20_wall_W",
+        "position": [
+          76.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_floor",
+        "position": [
+          120.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_wood_planks"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_ceiling",
+        "position": [
+          120.0,
+          4.0,
+          0.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_wall_N",
+        "position": [
+          120.0,
+          2.0,
+          -4.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_wall_S",
+        "position": [
+          120.0,
+          2.0,
+          4.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_wall_E",
+        "position": [
+          124.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r30_wall_W",
+        "position": [
+          116.0,
+          2.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_floor",
+        "position": [
+          0.0,
+          0.0,
+          40.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_ceiling",
+        "position": [
+          0.0,
+          4.0,
+          40.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_wall_N",
+        "position": [
+          0.0,
+          2.0,
+          36.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_wall_S",
+        "position": [
+          0.0,
+          2.0,
+          44.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_wall_E",
+        "position": [
+          4.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r01_wall_W",
+        "position": [
+          -4.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_floor",
+        "position": [
+          40.0,
+          0.0,
+          40.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone_pattern"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_ceiling",
+        "position": [
+          40.0,
+          4.0,
+          40.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_wall_N",
+        "position": [
+          40.0,
+          2.0,
+          36.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_wall_S",
+        "position": [
+          40.0,
+          2.0,
+          44.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_wall_E",
+        "position": [
+          44.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r11_wall_W",
+        "position": [
+          36.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_floor",
+        "position": [
+          80.0,
+          0.0,
+          40.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_tiles_tan_large"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_ceiling",
+        "position": [
+          80.0,
+          4.0,
+          40.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_wall_N",
+        "position": [
+          80.0,
+          2.0,
+          36.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_wall_S",
+        "position": [
+          80.0,
+          2.0,
+          44.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_wall_E",
+        "position": [
+          84.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r21_wall_W",
+        "position": [
+          76.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_floor",
+        "position": [
+          120.0,
+          0.0,
+          40.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_wood_planks"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_ceiling",
+        "position": [
+          120.0,
+          4.0,
+          40.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_wall_N",
+        "position": [
+          120.0,
+          2.0,
+          36.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_wall_S",
+        "position": [
+          120.0,
+          2.0,
+          44.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_wall_E",
+        "position": [
+          124.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r31_wall_W",
+        "position": [
+          116.0,
+          2.0,
+          40.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_floor",
+        "position": [
+          0.0,
+          0.0,
+          80.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_ceiling",
+        "position": [
+          0.0,
+          4.0,
+          80.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_wall_N",
+        "position": [
+          0.0,
+          2.0,
+          76.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_wall_S",
+        "position": [
+          0.0,
+          2.0,
+          84.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_wall_E",
+        "position": [
+          4.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r02_wall_W",
+        "position": [
+          -4.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_floor",
+        "position": [
+          40.0,
+          0.0,
+          80.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone_pattern"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_ceiling",
+        "position": [
+          40.0,
+          4.0,
+          80.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_wall_N",
+        "position": [
+          40.0,
+          2.0,
+          76.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_wall_S",
+        "position": [
+          40.0,
+          2.0,
+          84.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_wall_E",
+        "position": [
+          44.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r12_wall_W",
+        "position": [
+          36.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_floor",
+        "position": [
+          80.0,
+          0.0,
+          80.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_tiles_tan_large"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_ceiling",
+        "position": [
+          80.0,
+          4.0,
+          80.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_wall_N",
+        "position": [
+          80.0,
+          2.0,
+          76.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_wall_S",
+        "position": [
+          80.0,
+          2.0,
+          84.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_wall_E",
+        "position": [
+          84.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r22_wall_W",
+        "position": [
+          76.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_floor",
+        "position": [
+          120.0,
+          0.0,
+          80.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_wood_planks"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_ceiling",
+        "position": [
+          120.0,
+          4.0,
+          80.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_wall_N",
+        "position": [
+          120.0,
+          2.0,
+          76.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_wall_S",
+        "position": [
+          120.0,
+          2.0,
+          84.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_wall_E",
+        "position": [
+          124.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r32_wall_W",
+        "position": [
+          116.0,
+          2.0,
+          80.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_rock_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_floor",
+        "position": [
+          0.0,
+          0.0,
+          120.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_ceiling",
+        "position": [
+          0.0,
+          4.0,
+          120.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_wall_N",
+        "position": [
+          0.0,
+          2.0,
+          116.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_wall_S",
+        "position": [
+          0.0,
+          2.0,
+          124.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_wall_E",
+        "position": [
+          4.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r03_wall_W",
+        "position": [
+          -4.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_floor",
+        "position": [
+          40.0,
+          0.0,
+          120.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_stone_pattern"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_ceiling",
+        "position": [
+          40.0,
+          4.0,
+          120.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_wall_N",
+        "position": [
+          40.0,
+          2.0,
+          116.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_wall_S",
+        "position": [
+          40.0,
+          2.0,
+          124.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_wall_E",
+        "position": [
+          44.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r13_wall_W",
+        "position": [
+          36.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_floor",
+        "position": [
+          80.0,
+          0.0,
+          120.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_tiles_tan_large"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_ceiling",
+        "position": [
+          80.0,
+          4.0,
+          120.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_wall_N",
+        "position": [
+          80.0,
+          2.0,
+          116.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_wall_S",
+        "position": [
+          80.0,
+          2.0,
+          124.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_wall_E",
+        "position": [
+          84.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r23_wall_W",
+        "position": [
+          76.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_floor",
+        "position": [
+          120.0,
+          0.0,
+          120.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "floor_wood_planks"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": true,
+          "bodyType": "STATIC",
+          "colliderType": "PLANE"
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_ceiling",
+        "position": [
+          120.0,
+          4.0,
+          120.0
+        ],
+        "rotation": [
+          180.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_wall_N",
+        "position": [
+          120.0,
+          2.0,
+          116.0
+        ],
+        "rotation": [
+          90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_wall_S",
+        "position": [
+          120.0,
+          2.0,
+          124.0
+        ],
+        "rotation": [
+          -90.0,
+          0.0,
+          0.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_wall_E",
+        "position": [
+          124.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "plane",
+        "name": "r33_wall_W",
+        "position": [
+          116.0,
+          2.0,
+          120.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "size": 8.0,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r00_box_30_65",
+        "position": [
+          -2.0,
+          0.5,
+          1.5
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r00_box_70_35",
+        "position": [
+          2.0,
+          0.5,
+          -1.5
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_timber"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r11_box_68_68",
+        "position": [
+          41.8,
+          0.5,
+          41.8
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_brick_stone_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r22_box_35_35",
+        "position": [
+          78.5,
+          0.5,
+          78.5
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_rock"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r30_box_50_60",
+        "position": [
+          120.0,
+          0.5,
+          1.0
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_brick_sand_center"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r33_box_40_70",
+        "position": [
+          119.0,
+          0.5,
+          122.0
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_stone"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      },
+      {
+        "type": "box",
+        "name": "r13_box_50_50",
+        "position": [
+          40.0,
+          0.5,
+          120.0
+        ],
+        "size": 0.5,
+        "textures": [
+          "wall_timber_structure"
+        ],
+        "material": "default",
+        "physics": {
+          "enabled": false
+        }
+      }
+    ],
+    "portals": [
+      {
+        "id": "door_r00_r10_a",
+        "name": "r00->r10 (side E)",
+        "type": "doorway",
+        "position": [
+          3.9,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r00_r10_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r00_r10_b",
+        "name": "r10->r00 (side W)",
+        "type": "doorway",
+        "position": [
+          36.1,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r00_r10_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r10_r20_a",
+        "name": "r10->r20 (side E)",
+        "type": "doorway",
+        "position": [
+          43.9,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r10_r20_b",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r10_r20_b",
+        "name": "r20->r10 (side W)",
+        "type": "doorway",
+        "position": [
+          76.1,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r10_r20_a",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r20_r30_a",
+        "name": "r20->r30 (side E)",
+        "type": "doorway",
+        "position": [
+          83.9,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r20_r30_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r20_r30_b",
+        "name": "r30->r20 (side W)",
+        "type": "doorway",
+        "position": [
+          116.1,
+          1.5,
+          0.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r20_r30_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r01_r11_a",
+        "name": "r01->r11 (side E)",
+        "type": "doorway",
+        "position": [
+          3.9,
+          1.5,
+          40.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r01_r11_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r01_r11_b",
+        "name": "r11->r01 (side W)",
+        "type": "doorway",
+        "position": [
+          36.1,
+          1.5,
+          40.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r01_r11_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r21_r31_a",
+        "name": "r21->r31 (side E)",
+        "type": "doorway",
+        "position": [
+          83.9,
+          1.5,
+          40.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r21_r31_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r21_r31_b",
+        "name": "r31->r21 (side W)",
+        "type": "doorway",
+        "position": [
+          116.1,
+          1.5,
+          40.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r21_r31_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r02_r12_a",
+        "name": "r02->r12 (side E)",
+        "type": "doorway",
+        "position": [
+          3.9,
+          1.5,
+          80.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r02_r12_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r02_r12_b",
+        "name": "r12->r02 (side W)",
+        "type": "doorway",
+        "position": [
+          36.1,
+          1.5,
+          80.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r02_r12_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r22_r32_a",
+        "name": "r22->r32 (side E)",
+        "type": "doorway",
+        "position": [
+          83.9,
+          1.5,
+          80.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r22_r32_b",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r22_r32_b",
+        "name": "r32->r22 (side W)",
+        "type": "doorway",
+        "position": [
+          116.1,
+          1.5,
+          80.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r22_r32_a",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r03_r13_a",
+        "name": "r03->r13 (side E)",
+        "type": "doorway",
+        "position": [
+          3.9,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r03_r13_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r03_r13_b",
+        "name": "r13->r03 (side W)",
+        "type": "doorway",
+        "position": [
+          36.1,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r03_r13_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r13_r23_a",
+        "name": "r13->r23 (side E)",
+        "type": "doorway",
+        "position": [
+          43.9,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r13_r23_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r13_r23_b",
+        "name": "r23->r13 (side W)",
+        "type": "doorway",
+        "position": [
+          76.1,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r13_r23_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r23_r33_a",
+        "name": "r23->r33 (side E)",
+        "type": "doorway",
+        "position": [
+          83.9,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r23_r33_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r23_r33_b",
+        "name": "r33->r23 (side W)",
+        "type": "doorway",
+        "position": [
+          116.1,
+          1.5,
+          120.0
+        ],
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r23_r33_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r00_r01_a",
+        "name": "r00->r01 (side S)",
+        "type": "doorway",
+        "position": [
+          0.0,
+          1.5,
+          3.9
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r00_r01_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r00_r01_b",
+        "name": "r01->r00 (side N)",
+        "type": "doorway",
+        "position": [
+          0.0,
+          1.5,
+          36.1
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r00_r01_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r20_r21_a",
+        "name": "r20->r21 (side S)",
+        "type": "doorway",
+        "position": [
+          80.0,
+          1.5,
+          3.9
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r20_r21_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r20_r21_b",
+        "name": "r21->r20 (side N)",
+        "type": "doorway",
+        "position": [
+          80.0,
+          1.5,
+          36.1
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r20_r21_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r31_r32_a",
+        "name": "r31->r32 (side S)",
+        "type": "doorway",
+        "position": [
+          120.0,
+          1.5,
+          43.9
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r31_r32_b",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "door_r31_r32_b",
+        "name": "r32->r31 (side N)",
+        "type": "doorway",
+        "position": [
+          120.0,
+          1.5,
+          76.1
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "door_r31_r32_a",
+        "passable": true,
+        "open": true,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r12_r13_a",
+        "name": "r12->r13 (side S)",
+        "type": "doorway",
+        "position": [
+          40.0,
+          1.5,
+          83.9
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r12_r13_b",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "closed_door_r12_r13_b",
+        "name": "r13->r12 (side N)",
+        "type": "doorway",
+        "position": [
+          40.0,
+          1.5,
+          116.1
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 2.0,
+        "height": 3.0,
+        "destination": "closed_door_r12_r13_a",
+        "passable": false,
+        "open": false,
+        "mirrorOverlay": false,
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "mirror_r11",
+        "name": "Mirror r11 N",
+        "type": "mirror",
+        "position": [
+          40.0,
+          1.5,
+          36.1
+        ],
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "width": 2.5,
+        "height": 3.0,
+        "destination": "mirror_r11",
+        "passable": false,
+        "open": true,
+        "mirrorOverlay": true,
+        "mirrorIntensity": 0.6,
+        "mirrorTint": [
+          0.7,
+          0.8,
+          1.0
+        ],
+        "enabled": true,
+        "visible": true,
+        "framebuffer": {
+          "width": 512,
+          "height": 512
+        }
+      }
+    ],
+    "lights": [
+      {
+        "type": "directional",
+        "direction": [
+          -0.25,
+          -1.0,
+          -0.25
+        ],
+        "ambient": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "diffuse": [
+          0.9,
+          0.9,
+          0.9
+        ],
+        "specular": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "enabled": true
+      }
+    ]
+  }
+}

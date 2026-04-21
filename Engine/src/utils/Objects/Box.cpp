@@ -78,6 +78,13 @@ auto ObjectGenerator::box(input::ObjectGenerator input)
 
   auto object = std::make_shared<Object>(cubeVAO, VBO, 36);
 
+  // Bounding sphere: a unit cube centred on the origin spans ±size on every
+  // axis, so the tight enclosing sphere has radius `size * sqrt(3)`. Doing
+  // this here (rather than scanning vertices later) keeps the generator
+  // self-contained and avoids retaining the vertex buffer on the CPU.
+  object->setBoundingSphere(glm::vec3(0.0f),
+                            input.size * 1.7320508f /* sqrt(3) */);
+
   object->setTextures(input.textures);
   object->setShader(input.shader);
   object->setName(input.name);

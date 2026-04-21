@@ -7,6 +7,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <cmath>
+
 using namespace omega::utils;
 using namespace omega::geometry;
 using namespace omega::render;
@@ -83,6 +85,15 @@ auto ObjectGenerator::container(input::ObjectGenerator input)
   glEnableVertexAttribArray(2);
 
   auto object = std::make_shared<Object>(cubeVAO, VBO, 36);
+
+  // Container is an axis-aligned box of (2.5*size, size, size) half-extents
+  // centred on the origin; the enclosing sphere reaches the farthest corner.
+  {
+    const float r = std::sqrt(containerSizeX * containerSizeX +
+                              containerSizeY * containerSizeY +
+                              containerSizeZ * containerSizeZ);
+    object->setBoundingSphere(glm::vec3(0.0f), r);
+  }
 
   object->setTextures(input.textures);
   object->setShader(input.shader);

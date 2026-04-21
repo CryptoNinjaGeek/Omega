@@ -7,6 +7,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 using namespace omega::utils;
 using namespace omega::geometry;
 using namespace omega::render;
@@ -66,6 +70,29 @@ auto ObjectGenerator::mesh(input::MeshInput input)
 
   for (const auto &[key, value] : input.textures) {
 	object->addTexture(value);
+  }
+
+  // Compute a local-space bounding sphere from the AABB centre. This is the
+  // "centre-of-AABB then max distance" approach: tighter than picking an
+  // arbitrary vertex as the centre, looser than full Ritter / Welzl, and
+  // O(n) in two simple passes. For the meshes we feed through this generator
+  // (assimp sub-meshes, demo geometry) the looseness is a non-issue — the
+  // sphere only needs to *enclose* the geometry to keep the cull conservative.
+  if (!input.vertices.empty()) {
+    glm::vec3 mn(std::numeric_limits<float>::max());
+    glm::vec3 mx(-std::numeric_limits<float>::max());
+    for (const auto &v : input.vertices) {
+      mn = glm::min(mn, v.position);
+      mx = glm::max(mx, v.position);
+    }
+    const glm::vec3 center = 0.5f * (mn + mx);
+    float radiusSq = 0.0f;
+    for (const auto &v : input.vertices) {
+      const glm::vec3 d = v.position - center;
+      const float r2 = glm::dot(d, d);
+      if (r2 > radiusSq) radiusSq = r2;
+    }
+    object->setBoundingSphere(center, std::sqrt(radiusSq));
   }
 
   return object;

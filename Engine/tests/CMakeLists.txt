@@ -14,6 +14,11 @@ add_executable(oEngineTests
         PortalCameraTest.cpp
         FrustumTest.cpp
         LogTest.cpp
+        ObjectBoundingSphereTest.cpp
+        PortalRendererStencilTest.cpp
+        HeightmapTest.cpp
+        TerrainMeshBuilderTest.cpp
+        TerrainCameraControllerTest.cpp
 )
 
 target_link_libraries(oEngineTests

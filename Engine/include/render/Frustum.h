@@ -66,6 +66,25 @@ public:
   /// Single-point containment: `true` iff `point` lies inside all planes.
   static bool containsPoint(const std::array<glm::vec4, COUNT> &planes,
                             const glm::vec3 &point);
+
+  /// Conservative sphere-vs-frustum rejection. Returns `true` iff the sphere
+  /// lies entirely on the outside (negative) side of at least one plane —
+  /// i.e. the sphere cannot intersect the frustum and is safe to cull.
+  ///
+  /// Relies on the normalised-plane convention from `extractPlanes`: because
+  /// `plane.xyz` is a unit vector, `dot(plane.xyz, center) + plane.w` is the
+  /// signed distance from `center` to the plane (positive on the inside).
+  /// The sphere is fully outside a given plane when that distance is less
+  /// than `-radius`.
+  ///
+  /// As with `allPointsOutsideAnyPlane`, this is a one-sided test: false
+  /// negatives are possible (a sphere that straddles a corner of the frustum
+  /// with no single plane rejecting it passes through), but false positives
+  /// are not. Missing a cull costs a draw call; a false positive would be a
+  /// rendering bug.
+  static bool sphereOutsideAnyPlane(
+      const std::array<glm::vec4, COUNT> &planes,
+      const glm::vec3 &center, float radius);
 };
 
 }  // namespace render

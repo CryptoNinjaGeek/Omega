@@ -429,7 +429,7 @@
         "normal": [1.0, 0.0, 0.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_main_right",
+        "destination": "portal_main_right",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -444,7 +444,7 @@
         "normal": [-1.0, 0.0, 0.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_main_left",
+        "destination": "portal_main_left",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -459,7 +459,7 @@
         "normal": [0.0, 0.0, 1.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_south_north",
+        "destination": "portal_south_north",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -474,7 +474,7 @@
         "normal": [0.0, 0.0, -1.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_north_south",
+        "destination": "portal_north_south",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -489,7 +489,7 @@
         "normal": [0.0, 0.0, 1.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_tunnel2_end",
+        "destination": "portal_tunnel2_end",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -504,7 +504,7 @@
         "normal": [0.0, 0.0, -1.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_tunnel1_end",
+        "destination": "portal_tunnel1_end",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -519,7 +519,7 @@
         "normal": [1.0, 0.0, 0.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_cross2",
+        "destination": "portal_cross2",
         "enabled": true,
         "visible": true,
         "framebuffer": {
@@ -534,7 +534,7 @@
         "normal": [-1.0, 0.0, 0.0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_cross1",
+        "destination": "portal_cross1",
         "enabled": true,
         "visible": true,
         "framebuffer": {

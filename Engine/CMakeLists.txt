@@ -102,8 +102,6 @@ add_library(oEngine SHARED
         src/geometry/ObjectTree.cpp
         include/geometry/Portal.h
         src/geometry/Portal.cpp
-        include/geometry/PortalPair.h
-        src/geometry/PortalPair.cpp
         include/geometry/PortalSurface.h
         src/geometry/PortalSurface.cpp
         include/geometry/PortalRenderer.h
@@ -111,6 +109,13 @@ add_library(oEngine SHARED
         include/render/PortalFramebuffer.h
         include/utils/PortalSceneLoader.h
         src/utils/PortalSceneLoader.cpp
+
+        include/world/Heightmap.h
+        src/world/Heightmap.cpp
+        include/world/TerrainMeshBuilder.h
+        src/world/TerrainMeshBuilder.cpp
+        include/world/TerrainCameraController.h
+        src/world/TerrainCameraController.cpp
 )
 
 include_directories(oEngine PUBLIC include)

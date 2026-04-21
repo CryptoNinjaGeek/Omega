@@ -1,0 +1,200 @@
+{
+  "version": "1.0",
+  "scene": {
+    "name": "Portal POC Showcase",
+    "_doc": "Single-room showroom exercising every portal feature the engine currently supports. Loaded by default by the Portal demo. Coloured corner boxes make portal reflections obvious at a glance. See Demo/Portal/main.cpp for the live hotkey panel.",
+    "camera": {
+      "position": [0.0, 1.0, 2.0],
+      "yaw": -90.0,
+      "pitch": 0.0
+    },
+    "ambient": [0.45, 0.45, 0.45, 1.0],
+    "textures": {
+      "floor": {
+        "file": ":/textures/container2.png",
+        "type": "diffuse"
+      },
+      "wall": {
+        "file": ":/textures/brickwall.jpg",
+        "type": "diffuse"
+      },
+      "barrel": {
+        "file": ":/textures/Barrel_v1.tga",
+        "type": "diffuse"
+      },
+      "grass": {
+        "file": ":/textures/Grass_v1.tga",
+        "type": "diffuse"
+      },
+      "bricks": {
+        "file": ":/textures/bricks2.jpg",
+        "type": "diffuse"
+      },
+      "cargo": {
+        "file": ":/textures/Cargo_container_v1.tga",
+        "type": "diffuse"
+      },
+      "wood": {
+        "file": ":/textures/Wooden_box_v1.tga",
+        "type": "diffuse"
+      }
+    },
+    "materials": {
+      "default": { "shininess": 32.0 },
+      "metal":   { "shininess": 128.0 }
+    },
+    "objects": [
+      { "type": "plane", "name": "floor",
+        "position": [0.0, 0.0, 0.0],
+        "size": 10.0,
+        "textures": ["floor"], "material": "default",
+        "physics": { "enabled": true, "bodyType": "STATIC", "colliderType": "PLANE" } },
+
+      { "type": "plane", "name": "ceiling",
+        "position": [0.0, 4.0, 0.0],
+        "rotation": [180.0, 0.0, 0.0],
+        "size": 10.0,
+        "textures": ["wall"], "material": "default",
+        "physics": { "enabled": false } },
+
+      { "type": "plane", "name": "wall_north",
+        "position": [0.0, 2.0, -5.0],
+        "rotation": [90.0, 0.0, 0.0],
+        "size": 10.0,
+        "textures": ["wall"], "material": "default",
+        "physics": { "enabled": false } },
+
+      { "type": "plane", "name": "wall_south",
+        "position": [0.0, 2.0, 5.0],
+        "rotation": [-90.0, 0.0, 0.0],
+        "size": 10.0,
+        "textures": ["wall"], "material": "default",
+        "physics": { "enabled": false } },
+
+      { "type": "plane", "name": "wall_east",
+        "position": [5.0, 2.0, 0.0],
+        "rotation": [0.0, -90.0, 0.0],
+        "size": 10.0,
+        "textures": ["wall"], "material": "default",
+        "physics": { "enabled": false } },
+
+      { "type": "plane", "name": "wall_west",
+        "position": [-5.0, 2.0, 0.0],
+        "rotation": [0.0, 90.0, 0.0],
+        "size": 10.0,
+        "textures": ["wall"], "material": "default",
+        "physics": { "enabled": false } },
+
+      { "type": "box", "name": "marker_nw_barrel",
+        "position": [-3.5, 0.5, -3.5], "size": 0.6,
+        "textures": ["barrel"], "material": "metal",
+        "physics": { "enabled": false } },
+      { "type": "box", "name": "marker_ne_cargo",
+        "position": [ 3.5, 0.5, -3.5], "size": 0.6,
+        "textures": ["cargo"], "material": "metal",
+        "physics": { "enabled": false } },
+      { "type": "box", "name": "marker_sw_bricks",
+        "position": [-3.5, 0.5,  3.5], "size": 0.6,
+        "textures": ["bricks"], "material": "default",
+        "physics": { "enabled": false } },
+      { "type": "box", "name": "marker_se_grass",
+        "position": [ 3.5, 0.5,  3.5], "size": 0.6,
+        "textures": ["grass"], "material": "default",
+        "physics": { "enabled": false } },
+      { "type": "box", "name": "marker_center",
+        "position": [0.0, 0.35, 0.0], "size": 0.35,
+        "textures": ["wood"], "material": "default",
+        "physics": { "enabled": false } }
+    ],
+    "portals": [
+      {
+        "id": "mirror_north",
+        "name": "Blue Mirror (self-linked, tinted)",
+        "type": "mirror",
+        "position": [0.0, 2.0, -4.9],
+        "normal": [0.0, 0.0, 1.0],
+        "width": 2.5, "height": 3.0,
+        "destination": "mirror_north",
+        "passable": false, "open": true,
+        "mirrorOverlay": true,
+        "mirrorIntensity": 0.6,
+        "mirrorTint": [0.55, 0.75, 1.0],
+        "enabled": true, "visible": true,
+        "framebuffer": { "width": 1024, "height": 1024 }
+      },
+      {
+        "id": "doorway_east",
+        "name": "Doorway A -> West",
+        "type": "doorway",
+        "position": [4.9, 1.5, 0.0],
+        "normal": [-1.0, 0.0, 0.0],
+        "width": 2.0, "height": 3.0,
+        "destination": "doorway_west",
+        "passable": true, "open": true,
+        "mirrorOverlay": false,
+        "enabled": true, "visible": true,
+        "framebuffer": { "width": 1024, "height": 1024 }
+      },
+      {
+        "id": "doorway_west",
+        "name": "Doorway B -> East",
+        "type": "doorway",
+        "position": [-4.9, 1.5, 0.0],
+        "normal": [1.0, 0.0, 0.0],
+        "width": 2.0, "height": 3.0,
+        "destination": "doorway_east",
+        "passable": true, "open": true,
+        "mirrorOverlay": false,
+        "enabled": true, "visible": true,
+        "framebuffer": { "width": 1024, "height": 1024 }
+      },
+      {
+        "id": "window_south",
+        "name": "Window (non-passable, plain mirror)",
+        "type": "window",
+        "position": [-2.5, 2.0, 4.9],
+        "normal": [0.0, 0.0, -1.0],
+        "width": 1.5, "height": 2.5,
+        "destination": "window_south",
+        "passable": false, "open": true,
+        "mirrorOverlay": false,
+        "enabled": true, "visible": true,
+        "framebuffer": { "width": 1024, "height": 1024 }
+      },
+      {
+        "id": "closed_door_south",
+        "name": "Closed Door (toggle with O)",
+        "type": "doorway",
+        "position": [2.5, 1.5, 4.9],
+        "normal": [0.0, 0.0, -1.0],
+        "width": 2.0, "height": 3.0,
+        "destination": "closed_door_south",
+        "passable": false, "open": false,
+        "mirrorOverlay": true,
+        "mirrorIntensity": 0.8,
+        "mirrorTint": [1.0, 0.75, 0.35],
+        "enabled": true, "visible": true,
+        "framebuffer": { "width": 1024, "height": 1024 }
+      }
+    ],
+    "lights": [
+      {
+        "type": "directional",
+        "direction": [-0.2, -1.0, -0.2],
+        "ambient":  [0.6, 0.6, 0.6],
+        "diffuse":  [1.0, 1.0, 1.0],
+        "specular": [1.0, 1.0, 1.0],
+        "enabled": true
+      },
+      {
+        "type": "point",
+        "position": [0.0, 3.5, 0.0],
+        "ambient":  [0.3, 0.3, 0.3],
+        "diffuse":  [0.9, 0.9, 0.9],
+        "specular": [1.0, 1.0, 1.0],
+        "constant": 1.0, "linear": 0.09, "quadratic": 0.032,
+        "enabled": true
+      }
+    ]
+  }
+}

@@ -18,40 +18,23 @@ class OMEGA_EXPORT PortalCamera {
 public:
   PortalCamera() = default;
 
-  /**
-   * Calculate view matrix for rendering through a portal (legacy: uses source/dest portals)
-   * @param playerCamera The player's current camera
-   * @param sourcePortal The portal the player is looking through
-   * @param destinationPortal The portal that shows the destination view
-   * @return View matrix for portal rendering
-   */
-  static glm::mat4 calculatePortalView(
-      const Camera& playerCamera,
-      const geometry::Portal& sourcePortal,
-      const geometry::Portal& destinationPortal);
+  // --- Phase 2.2 public surface ------------------------------------------
+  // After the PortalPair retirement there are four supported entry points:
+  //   * calculatePortalViewUnified — view matrix for rendering through a portal
+  //   * getClippingPlane           — oblique-clip plane for the destination
+  //   * isPortalVisible            — front-facing + distance check
+  //   * isInViewFrustum            — frustum rejection on the quad corners
+  //
+  // `transformPosition`/`transformDirection` are intentionally kept public
+  // even though they're not strictly part of the render pipeline: Phase 4
+  // (entity traversal) will call them to teleport the player/AI through a
+  // portal, and `PortalCameraTest` exercises them today. Everything else
+  // (doorway/mirror dispatchers, relative-transform helper) is private.
 
   /**
-   * Calculate view matrix for doorway portal (new doorway-based system)
-   * @param playerCamera The player's current camera
-   * @param portal The portal the player is looking through
-   * @return View matrix for portal rendering
-   */
-  static glm::mat4 calculateDoorwayView(
-      const Camera& playerCamera,
-      const geometry::Portal& portal);
-
-  /**
-   * Calculate view matrix for mirror portal (self-connected)
-   * @param playerCamera The player's current camera
-   * @param portal The mirror portal
-   * @return View matrix for mirror rendering
-   */
-  static glm::mat4 calculateMirrorView(
-      const Camera& playerCamera,
-      const geometry::Portal& portal);
-
-  /**
-   * Unified interface for calculating portal view (automatically detects doorway vs mirror)
+   * Unified interface for calculating portal view. Looks at
+   * `portal.getDestination()` and picks mirror vs doorway math automatically.
+   * This is the only view-matrix entry point renderer code should use.
    * @param playerCamera The player's current camera
    * @param portal The portal to look through
    * @return View matrix for portal rendering
@@ -61,21 +44,26 @@ public:
       const geometry::Portal& portal);
 
   /**
-   * Calculate view matrix with clipping plane support
-   * Prevents seeing through the back of the portal
+   * Get clipping plane for portal (prevents seeing portal backside).
+   * @return Clipping plane equation (normal.x, normal.y, normal.z, distance)
    */
-  static glm::mat4 calculatePortalViewWithClipping(
-      const Camera& playerCamera,
-      const geometry::Portal& sourcePortal,
-      const geometry::Portal& destinationPortal,
-      glm::vec4& clippingPlane);
+  static glm::vec4 getClippingPlane(const geometry::Portal& portal);
 
   /**
-   * Transform a position through a portal pair
-   * @param position Position in source portal space
-   * @param sourcePortal Source portal
-   * @param destinationPortal Destination portal
-   * @return Transformed position in destination portal space
+   * Check if portal is visible from camera — front-facing plus max-distance
+   * LOD cut.
+   */
+  static bool isPortalVisible(const geometry::Portal& portal, const Camera& camera);
+
+  /**
+   * Check if portal is in camera's view frustum (all four corners tested).
+   */
+  static bool isInViewFrustum(const geometry::Portal& portal, const Camera& camera);
+
+  /**
+   * Transform a position from source portal space to destination portal
+   * space. Entry point for Phase 4 entity traversal (teleporting players /
+   * AI through a portal pair); exercised today by `PortalCameraTest`.
    */
   static glm::vec3 transformPosition(
       const glm::vec3& position,
@@ -83,43 +71,38 @@ public:
       const geometry::Portal& destinationPortal);
 
   /**
-   * Transform a direction through a portal pair
-   * @param direction Direction vector in source portal space
-   * @param sourcePortal Source portal
-   * @param destinationPortal Destination portal
-   * @return Transformed direction in destination portal space
+   * Transform a direction (no translation) through a portal pair. Pair to
+   * `transformPosition`; used to rotate velocities / facing when an entity
+   * passes through.
    */
   static glm::vec3 transformDirection(
       const glm::vec3& direction,
       const geometry::Portal& sourcePortal,
       const geometry::Portal& destinationPortal);
 
-  /**
-   * Get clipping plane for portal (prevents seeing portal backside)
-   * @param portal The portal to get clipping plane for
-   * @return Clipping plane equation (normal.x, normal.y, normal.z, distance)
-   */
-  static glm::vec4 getClippingPlane(const geometry::Portal& portal);
-
-  /**
-   * Check if portal is visible from camera
-   * @param portal The portal to check
-   * @param camera The camera to check visibility from
-   * @return True if portal is visible from camera
-   */
-  static bool isPortalVisible(const geometry::Portal& portal, const Camera& camera);
-
-  /**
-   * Check if portal is in view frustum
-   * @param portal The portal to check
-   * @param camera The camera to check frustum against
-   * @return True if portal is in view frustum
-   */
-  static bool isInViewFrustum(const geometry::Portal& portal, const Camera& camera);
-
 private:
   /**
-   * Calculate relative transform between two portals
+   * Calculate view matrix for doorway portal (destination != self). Uses
+   * Valve-style relative transform with a 180° yaw about local up to flip
+   * the player's camera through the pair. Dispatched internally by
+   * `calculatePortalViewUnified` — callers should not invoke directly.
+   */
+  static glm::mat4 calculateDoorwayView(
+      const Camera& playerCamera,
+      const geometry::Portal& portal);
+
+  /**
+   * Calculate view matrix for mirror portal (destination == self). Reflects
+   * the player camera across the portal plane. Dispatched internally by
+   * `calculatePortalViewUnified`.
+   */
+  static glm::mat4 calculateMirrorView(
+      const Camera& playerCamera,
+      const geometry::Portal& portal);
+
+  /**
+   * Calculate relative transform between two portals (M_rel = T_dst *
+   * inverse(T_src)). Used by `transformPosition`/`transformDirection`.
    */
   static glm::mat4 calculateRelativeTransform(
       const geometry::Portal& source,

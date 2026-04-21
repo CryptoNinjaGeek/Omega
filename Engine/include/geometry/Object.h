@@ -22,6 +22,18 @@ namespace geometry {
 
 enum class ObjectType { Elements, Array };
 
+// Local-space bounding sphere used for coarse view-frustum culling.
+//
+// The sphere is stored in the object's LOCAL (model-space) coordinates —
+// Scene::render transforms it by the object's model matrix at cull time.
+// This matches the pattern mesh generators can populate once at construction
+// time (when vertex data is still in scope) without being invalidated when
+// the object is later translated/rotated/scaled via `model_`.
+struct BoundingSphere {
+  glm::vec3 center{0.0f};
+  float radius{0.0f};
+};
+
 class OMEGA_EXPORT Object : public interface::Entity {
 public:
   Object(unsigned int vao, unsigned int vbo, unsigned int cnt,
@@ -68,6 +80,41 @@ public:
   ObjectType getType() const { return type_; }
   glm::mat4 getModel() const { return model_; }
 
+  // Additional accessors used by demos to clone a loaded mesh into many
+  // instances that share VAO/VBO but carry per-instance transforms. Object
+  // does not own its GL handles (no destructor frees them), so multiple
+  // Objects may safely point at the same VAO. See Demo/Basic forest.
+  unsigned int getVBO() const { return vbo_; }
+  const std::vector<std::shared_ptr<render::Texture>>& getTextures() const {
+    return textures_;
+  }
+  std::optional<render::Material> getMaterial() const { return material_; }
+
+  // Bounding-sphere API used by Scene::render for per-object frustum culling.
+  //
+  // Populated by mesh generators (Box, Plane, Container, Mesh, …) immediately
+  // after the vertex data is uploaded to the GPU — the sphere is derived from
+  // those same vertices and stored in local space. Objects without a sphere
+  // set (SkyBox, loaded assimp sub-meshes that we haven't measured yet) are
+  // never culled, which is the conservative default.
+  void setBoundingSphere(const glm::vec3& center, float radius) {
+    boundingSphere_ = BoundingSphere{center, radius};
+  }
+  void setBoundingSphere(const BoundingSphere& sphere) {
+    boundingSphere_ = sphere;
+  }
+  void clearBoundingSphere() { boundingSphere_.reset(); }
+  const std::optional<BoundingSphere>& boundingSphere() const {
+    return boundingSphere_;
+  }
+
+  // Return the bounding sphere transformed into world space by `model_`.
+  // The radius is scaled by the longest of the three scale factors encoded
+  // in the model matrix columns — a conservative choice that keeps the
+  // sphere fully enclosing under non-uniform scale (bounded by the largest
+  // axis). Returns std::nullopt if no local sphere was set.
+  std::optional<BoundingSphere> worldBoundingSphere() const;
+
 protected:
   std::string name_;
   unsigned int vao_;
@@ -85,6 +132,7 @@ protected:
   std::shared_ptr<render::Shader> shader_;
   std::vector<std::shared_ptr<render::Texture>> textures_;
   std::vector<std::shared_ptr<interface::Light>> lights_;
+  std::optional<BoundingSphere> boundingSphere_{};
 };
 }  // namespace geometry
 }  // namespace omega

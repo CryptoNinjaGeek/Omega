@@ -2,6 +2,7 @@
 #include <system/Log.h>
 #include <fstream>
 #include <optional>
+#include <vector>
 
 using namespace omega::fs;
 
@@ -99,17 +100,31 @@ auto FileSystem::string(std::string file) -> std::string {
 	//   ./resources/shaders/foo.vs  (older bin/resources/shaders/ layout)
 	//   ./foo.vs                    (flat bin/foo.vs layout — matches how
 	//                                Demo/Portal CMake copies portal.vs)
+	// Additionally, every directory registered via `add(dir)` is prepended
+	// to the three cwd-relative candidates above. That lets a demo binary
+	// call `fs::instance()->add(exeDir)` and reference textures by their
+	// real on-disk layout (e.g. `:/castle/textures/wall_stone.png`) without
+	// depending on process cwd — which is the difference between "runs
+	// from the IDE" and "runs from Finder on macOS".
 	const std::string stripped = file.substr(2);  // drop leading ":/"
 	std::string basename = stripped;
 	if (auto slash = stripped.find_last_of('/');
 	    slash != std::string::npos) {
 	  basename = stripped.substr(slash + 1);
 	}
-	const std::string candidates[] = {
+	std::vector<std::string> candidates = {
 	    stripped,
 	    "resources/" + stripped,
 	    basename,
 	};
+	for (const auto &root : _paths) {
+	  const std::string prefix = root.empty() || root.back() == '/'
+	                                 ? root
+	                                 : root + "/";
+	  candidates.push_back(prefix + stripped);
+	  candidates.push_back(prefix + "resources/" + stripped);
+	  candidates.push_back(prefix + basename);
+	}
 	for (const auto &c : candidates) {
 	  if (auto disk = readDiskFile(c)) {
 	    return *disk;
@@ -164,18 +179,28 @@ auto FileSystem::data(std::string file)
 	// Disk overlay (mirrors FileSystem::string): resources.zip is often
 	// incomplete, so try the on-disk layout first and fall back to the zip.
 	// Candidates match the layouts used by FileSystem::string so text and
-	// binary assets resolve symmetrically.
+	// binary assets resolve symmetrically. Directories registered via
+	// `add(dir)` are appended as additional search roots — see the comment
+	// block in FileSystem::string for the full rationale.
 	const std::string stripped = file.substr(2);  // drop leading ":/"
 	std::string basename = stripped;
 	if (auto slash = stripped.find_last_of('/');
 	    slash != std::string::npos) {
 	  basename = stripped.substr(slash + 1);
 	}
-	const std::string candidates[] = {
+	std::vector<std::string> candidates = {
 	    stripped,
 	    "resources/" + stripped,
 	    basename,
 	};
+	for (const auto &root : _paths) {
+	  const std::string prefix = root.empty() || root.back() == '/'
+	                                 ? root
+	                                 : root + "/";
+	  candidates.push_back(prefix + stripped);
+	  candidates.push_back(prefix + "resources/" + stripped);
+	  candidates.push_back(prefix + basename);
+	}
 	for (const auto &c : candidates) {
 	  if (auto disk = readDiskBinary(c)) {
 	    return *disk;

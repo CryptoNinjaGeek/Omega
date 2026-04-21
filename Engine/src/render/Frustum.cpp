@@ -80,3 +80,19 @@ bool Frustum::containsPoint(const std::array<glm::vec4, COUNT> &planes,
   }
   return true;
 }
+
+bool Frustum::sphereOutsideAnyPlane(
+    const std::array<glm::vec4, COUNT> &planes,
+    const glm::vec3 &center, float radius) {
+  // A negative radius is nonsensical but clamp to 0 rather than silently
+  // inverting the meaning of the test.
+  const float r = radius < 0.0f ? 0.0f : radius;
+  for (const auto &plane : planes) {
+    const float signedDist = plane.x * center.x + plane.y * center.y +
+                             plane.z * center.z + plane.w;
+    if (signedDist < -r) {
+      return true;  // Sphere entirely on the outside of this plane.
+    }
+  }
+  return false;
+}

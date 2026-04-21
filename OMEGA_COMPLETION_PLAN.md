@@ -2,6 +2,26 @@
 
 Plan to close the gaps identified in the engine: clipping, culling, the doorway-redesign cutover, doors, traversal, world generation, physics, and tests. Phases are ordered so earlier work unblocks later work; within a phase the steps are roughly independent.
 
+## Status at a glance
+
+Legend: ✅ done · 🟡 partial · ⬜ not started. Verified against repo state on 2026-04-21.
+
+| Phase | Area | Status |
+|-------|------|--------|
+| 0     | Foundation & hygiene | ✅ complete |
+| 1     | Correct portal rendering | ✅ complete (plus bonus 1.2b R_180y fix) |
+| 2     | Retire legacy `PortalPair` | ✅ complete — `PortalPair.h/cpp` deleted, `linkedPortal_` field and legacy accessors removed, the triple-arg `calculatePortalView` body inlined into `calculateDoorwayView`, and `PortalCamera`'s public surface trimmed to the four documented entry points (plus `transformPosition`/`transformDirection` kept for Phase 4) |
+| 3     | Doors (animation + triggers) | ⬜ not started — no `setOpenTarget`, no `Trigger` class |
+| 4     | Traversal / teleport | ⬜ not started — no `didCross`, no `Portal::transformPoint` |
+| 5     | Tunnel / labyrinth generator | ⬜ not started — no `LabyrinthGenerator`, no `RoomBuilder` |
+| 6     | Physics integration | 🟡 partial — `PhysicsObject` struct + `reactphysics3d` wired into `Scene`, but no dedicated `Collider` class, no player capsule, no portal-aware teleport of bodies |
+| 7     | Tests, CI, polish | 🟡 partial — 7 unit test suites under `Engine/tests/` running via `ctest`; no CI workflow, no visual/golden-image tests, no `Engine/README.md`, `PORTAL_ENGINE_STATUS.md` not yet regenerated |
+
+Not covered here but tracked separately:
+- Outdoor scene / terrain — plan in `docs/outdoor_scene_plan.md` (CDLOD + analytical collision + sky/sun/water/vegetation). Not yet started in the tree.
+- Portal visual verification on the showcase demo — still deferred, see memory `project_portal_visual_verification.md`.
+- Castle labyrinth POC (Demo/Castle/) — 16-room 4×4 layout, 14 through-portal doorways (3 start closed), 1 mirror in r11, castle textures from `bin/castle/textures/`. Built 2026-04-21 ahead of Phase 3 to exercise the Phase 1 pipeline at scale and to give the Phase 3 door animation work a real scene to iterate against. `FileSystem::add(exeDir)` disk-overlay extension landed with it so `:/castle/textures/...` resolves without depending on cwd.
+
 ## Guiding principles
 
 - **Finish the doorway cutover before adding new subsystems.** Doors, traversal, and tunnels all assume the new standalone-`Portal` model. Keep `PortalPair` only until the new path is proven, then delete it in one commit.
@@ -13,7 +33,7 @@ Plan to close the gaps identified in the engine: clipping, culling, the doorway-
 
 **Goal: remove dev-state noise and make future work testable.**
 
-### 0.1 Strip debug instrumentation from PortalRenderer
+### ✅ 0.1 Strip debug instrumentation from PortalRenderer
 
 `Engine/src/geometry/PortalRenderer.cpp` has ~10 `static int` counter-gated `std::cout` blocks and repeated `glGetError` polls. Replace with a single, togglable logger (spdlog is already in the dependency graph).
 
@@ -22,7 +42,7 @@ Concretely:
 - Replace `std::cout` / `std::cerr` in `PortalRenderer`, `PortalCamera`, `Scene`, `Shader` with `OMEGA_LOG_DEBUG("portal", ...)`. Default level = `info`; debug is compile-time or env-controlled.
 - Keep `glGetError` polls but move them behind a single `OMEGA_GL_CHECK()` macro that no-ops in release.
 
-### 0.2 Propagate camera parameters to portal camera
+### ✅ 0.2 Propagate camera parameters to portal camera
 
 Kill the hardcoded `45°, 0.1, 100` in `PortalRenderer::renderPortalView`. Add FOV/near/far storage + accessors to `Camera`:
 
@@ -35,7 +55,7 @@ float farPlane() const { return far_; }
 
 Then in `renderPortalView`, the portal camera inherits `playerCamera->fov()`, `nearPlane()`, `farPlane()` and only the aspect ratio comes from the framebuffer. Remove the comment-TODO on lines 175–184.
 
-### 0.3 Make the portal shader a first-class resource
+### ✅ 0.3 Make the portal shader a first-class resource
 
 `PortalRenderer::renderPortalSurface` currently tries four file paths before giving up. Replace with a single resolution policy:
 
@@ -43,7 +63,7 @@ Then in `renderPortalView`, the portal camera inherits `playerCamera->fov()`, `n
 - Loading fails loudly on missing shaders — no silent fallbacks to `core.vs`.
 - The `defaultPortalShader` static is moved into `PortalRenderer` as a member and loaded once in `PortalRenderer()` constructor, not lazily.
 
-### 0.4 Test scaffolding
+### ✅ 0.4 Test scaffolding
 
 Add Google Test via `FetchContent_Declare(googletest …)` to the top-level `CMakeLists.txt`. Create `Engine/tests/CMakeLists.txt` with an `oEngineTests` executable, wired to `add_test()` / CTest. Initial targets:
 - `tests/math/PortalTransformTest.cpp`
@@ -60,7 +80,7 @@ These don't need GL — they test pure GLM math. CI (Phase 7) runs them on every
 
 **Goal: what you see through a portal is actually correct.**
 
-### 1.1 Clipping plane plumbed into shaders
+### ✅ 1.1 Clipping plane plumbed into shaders
 
 `PortalCamera::getClippingPlane` returns `vec4` but nothing uses it. Fix end-to-end:
 
@@ -69,14 +89,17 @@ These don't need GL — they test pure GLM math. CI (Phase 7) runs them on every
 - Before `scene->render(portalCamera)` in `renderPortalView`: `glEnable(GL_CLIP_DISTANCE0)`, set both uniforms on the mesh shader, then render, then `glDisable(GL_CLIP_DISTANCE0)`.
 - The clipping plane is the destination portal's plane with the normal facing *into* the destination space (so objects behind the destination portal get clipped).
 
-### 1.2 Real frustum culling against portal corners
+### ✅ 1.2 Real frustum culling against portal corners
+
+> **1.2b bonus (not in original plan):** R_180y flip in `PortalCamera::calculatePortalView` so face-to-face doorway pairs teleport through correctly; locked in by `PortalCameraTest::CalculatePortalViewPlacesCameraThroughPairedPortals`. Visual verification on showcase demo deferred — see memory `project_portal_visual_verification.md`.
+
 
 `PortalCamera::isInViewFrustum` is a dot-product + distance heuristic. Replace with a proper 6-plane frustum test:
 
 - Add `Camera::getFrustumPlanes()` returning `std::array<glm::vec4, 6>` extracted from `projection * view` (Gribb-Hartmann).
 - `PortalCamera::isInViewFrustum(portal, camera)` tests all four portal corners against all six planes; if all corners are outside one plane → culled.
 
-### 1.3 Object-level culling through portal bounds
+### ✅ 1.3 Object-level culling through portal bounds
 
 Currently `scene->render(portalCamera)` draws everything. For each object we need a cheap bounds test against the portal camera's frustum.
 
@@ -84,7 +107,10 @@ Currently `scene->render(portalCamera)` draws everything. For each object we nee
 - `Scene::render(camera)` iterates objects and skips those whose bounding sphere is fully outside the camera's frustum.
 - This benefits *all* rendering, not just portal rendering, so it lives in `Scene::render`, not in `PortalRenderer`.
 
-### 1.4 Nested-portal rendering strategy — decide and implement
+### ✅ 1.4 Nested-portal rendering strategy — decide and implement
+
+> Both FBO-per-recursion (A) and stencil-based (B) paths landed. Stencil path has regression coverage in `PortalRendererStencilTest.cpp`.
+
 
 Two options, pick one:
 
@@ -98,7 +124,7 @@ Implementation for A:
 - `PortalRenderer` gains `std::vector<std::shared_ptr<PortalFramebuffer>> fboPool_` sized to `maxRecursionDepth_ * N_portals`.
 - `renderPortalViewRecursive` picks the next free FBO by `(portal, depth)` and recurses, clipping applied at each level.
 
-### 1.5 Mirror overlay in fragment shader
+### ✅ 1.5 Mirror overlay in fragment shader
 
 `Portal::hasMirrorOverlay_` and `mirrorIntensity_` are stored but `portal.fs` ignores them. Extend:
 
@@ -118,7 +144,7 @@ void main() {
 
 `PortalRenderer::renderPortalSurface` sets the uniforms from the `Portal`.
 
-### 1.6 Scene-loader parity
+### ✅ 1.6 Scene-loader parity
 
 `PortalSceneLoader` must read: `destinationId`, `isOpen`, `isPassable`, `hasMirrorOverlay`, `mirrorIntensity`. Update `PortalSceneFormat.md` to document the new fields. Update `tunnel_scene.json` and `rooms_scene.json` to use the new schema — delete any `portalPairs` section once standalone works.
 
@@ -130,26 +156,29 @@ void main() {
 
 **Goal: one portal model in the codebase.**
 
-### 2.1 Delete PortalPair
+### ✅ 2.1 Delete PortalPair
 
-Once every demo uses standalone portals with `destinationId`, delete `PortalPair.h/cpp` and every reference:
-- `PortalRenderer::addPortalPair`, `portalPairs_` member, both render loops that iterate it.
-- `CMakeLists.txt` entries.
-- `Portal::linkedPortal_` and the legacy `setLinkedPortal`/`getLinkedPortal`/`calculatePortalView(src, dst)` helpers.
+Done 2026-04-21. `PortalPair.h/cpp` removed from the tree, along with:
+- `PortalRenderer::addPortalPair`, `portalPairs_` member, and all legacy render/gather loops that iterated them.
+- The `include/geometry/PortalPair.h` + `src/geometry/PortalPair.cpp` lines in `Engine/CMakeLists.txt`.
+- `Portal::linkedPortal_` field and the `setLinkedPortal`/`getLinkedPortal` accessors.
+- `PortalSceneLoader`'s legacy `linkedTo` parse branch and its `getPortalPairs()` accessor / `portalPairs_` member.
+- The triple-arg `calculatePortalView(camera, src, dst)` (body inlined into `calculateDoorwayView`) and the unused `calculatePortalViewWithClipping`.
 
-One PR, one commit.
+Verified via grep: no references to `PortalPair`, `linkedPortal`, `calculatePortalView(`, or `linkedTo` outside documentation (`PORTAL_DOORWAY_DESIGN.md`, `PORTAL_ENGINE_*`) or this plan.
 
-### 2.2 Consolidate PortalCamera
+### ✅ 2.2 Consolidate PortalCamera
 
-After 2.1, `PortalCamera::calculatePortalView(source, dest)` becomes unused. Inline what's worth keeping into `calculateDoorwayView` and delete the rest. The public surface becomes:
+Done 2026-04-21. `PortalCamera`'s public surface is now the four render-pipeline entry points plus the two entity-traversal helpers retained for Phase 4:
 
-- `calculatePortalViewUnified(camera, portal)` — the only entry point
+- `calculatePortalViewUnified(camera, portal)` — the only view-matrix entry point
 - `getClippingPlane(portal)`
 - `isPortalVisible(portal, camera)` + `isInViewFrustum(portal, camera)`
+- `transformPosition(pos, src, dst)` + `transformDirection(dir, src, dst)` — pragmatically kept public as the Phase 4 entity-traversal API; also exercised directly by `PortalCameraTest`.
 
-Everything else is private.
+`calculateDoorwayView`, `calculateMirrorView`, and `calculateRelativeTransform` are now private and dispatched from `calculatePortalViewUnified`. The `MirrorViewIsFinite` test was updated to drive the unified entry point instead of poking the private mirror helper.
 
-**Exit criteria:** no grep hit for `PortalPair`, `linkedPortal`, or the legacy triple-arg `calculatePortalView` anywhere in the tree.
+**Exit criteria:** ✅ no grep hit for `PortalPair`, `linkedPortal`, or the legacy triple-arg `calculatePortalView` in any `.h`/`.cpp`. Build + ctest verification must be run on the macOS host (the Linux sandbox cannot link against the project's dylibs).
 
 ---
 
@@ -159,7 +188,7 @@ Everything else is private.
 
 A door = a `Portal` with (a) a visible `Object` (the door mesh) whose rotation is driven by the portal's open state, and (b) a proximity trigger. No separate `Door` class — the doorway redesign folds this into `Portal`.
 
-### 3.1 Animated state on Portal
+### ⬜ 3.1 Animated state on Portal
 
 Add to `Portal`:
 
@@ -171,13 +200,13 @@ float openAmount() const { return openAmount_; }  // 0 = closed, 1 = open
 
 Internal state: `openAmount_`, `openTarget_`, `openSpeed_`. `isOpen()` returns `openAmount_ > 0.99f`, so renderer culling sees the transition instantly when the player triggers it.
 
-### 3.2 Door visual — attached Object
+### ⬜ 3.2 Door visual — attached Object
 
 `Portal` gets an optional `std::shared_ptr<Object> doorObject_` + a rotation axis/angle range. In `Portal::update`, the door object's `model_` is rotated by `lerp(closedAngle, openAngle, openAmount_)` around the hinge.
 
 In `Scene::process(dt)`, every portal gets `portal->update(dt)`.
 
-### 3.3 Proximity triggers
+### ⬜ 3.3 Proximity triggers
 
 Add `Engine/include/geometry/Trigger.h`:
 
@@ -194,7 +223,7 @@ public:
 
 `Scene` owns a `std::vector<Trigger>`. A door registers a trigger in its constructor that flips `portal->setOpenTarget(true, 0.5f)` on enter and `false` on exit.
 
-### 3.4 JSON schema for doors
+### ⬜ 3.4 JSON schema for doors
 
 Extend scene JSON:
 
@@ -225,13 +254,13 @@ Extend scene JSON:
 
 **Goal: the player actually walks through the portal.**
 
-### 4.1 Portal-plane crossing detection
+### ⬜ 4.1 Portal-plane crossing detection
 
 Per frame, for each open + passable portal, compare the player's previous-frame position against this-frame position against the portal plane. If the player crossed from the front hemisphere to the back hemisphere AND the crossing point lies within the portal's width/height → the player has traversed.
 
 Add `Portal::didCross(const glm::vec3& prev, const glm::vec3& curr, glm::vec3* intersection)`.
 
-### 4.2 Camera teleport through destination
+### ⬜ 4.2 Camera teleport through destination
 
 On crossing, apply the portal-to-destination transform to the camera:
 
@@ -240,11 +269,11 @@ On crossing, apply the portal-to-destination transform to the camera:
 
 Important gotcha: the player needs to be nudged slightly *past* the destination portal's plane after teleport, or next frame's crossing test fires again and they teleport back.
 
-### 4.3 Hook into input loop
+### ⬜ 4.3 Hook into input loop
 
 `Scene::process(dt)` iterates portals, calls `didCross` against the current camera, and teleports on the first match. Disable teleport on portals where `isPassable_` is false — those render the view but don't let you through.
 
-### 4.4 Mirror portals don't teleport
+### ⬜ 4.4 Mirror portals don't teleport
 
 A portal whose destination is itself (`isMirror()`) never teleports, regardless of `isPassable_`. Explicit check in the crossing loop.
 
@@ -256,7 +285,7 @@ A portal whose destination is itself (`isMirror()`) never teleports, regardless 
 
 **Goal: procedurally build a connected multi-room space.**
 
-### 5.1 Grid-graph generator
+### ⬜ 5.1 Grid-graph generator
 
 Add `Engine/include/utils/LabyrinthGenerator.h`:
 
@@ -269,7 +298,7 @@ class LabyrinthGenerator {
 
 Algorithm: randomized DFS maze generator on a `width × height` grid. Each cell becomes a room; removed walls become door connections.
 
-### 5.2 RoomBuilder — cell → geometry
+### ⬜ 5.2 RoomBuilder — cell → geometry
 
 Given a vector of `RoomCell`, emit:
 - One floor quad + one ceiling quad per cell.
@@ -278,7 +307,7 @@ Given a vector of `RoomCell`, emit:
 
 Output is a `Scene` directly, or a serialized JSON consumable by `PortalSceneLoader`.
 
-### 5.3 Demo integration
+### ⬜ 5.3 Demo integration
 
 Replace `Demo/Rooms/rooms_scene.json` generation step with a `--generate width height seed` CLI flag on the demo that calls `LabyrinthGenerator` + `RoomBuilder` at startup.
 
@@ -290,23 +319,29 @@ Replace `Demo/Rooms/rooms_scene.json` generation step with a `--generate width h
 
 **Goal: reactphysics3d actually drives something.**
 
-### 6.1 Collider component on Object
+### 🟡 6.1 Collider component on Object
+
+> `PhysicsObject` struct (`system/PhysicsObject.h`) + `reactphysics3d` physics world on `Scene` already exist, and scene JSON already accepts `"physics": { "enabled", "bodyType", "colliderType" }`. Still to do: split out a dedicated `Collider` class per the spec below, and expose box/sphere/mesh shape variants instead of the current enum.
+
 
 Add `Engine/include/system/Collider.h` — a thin wrapper around `reactphysics3d::CollisionBody` + a shape (box/sphere/mesh). `Object` gains `std::shared_ptr<Collider> collider_`.
 
 Scene JSON schema gains optional `"collider": { "type": "box", "size": [1,1,1] }` per object.
 
-### 6.2 Scene physics step
+### 🟡 6.2 Scene physics step
+
+> Physics world is owned by `Scene` and stepped in `Scene::process(dt)`; transforms sync back to `Object::model_`. Verify this is doing what the spec says before marking ✅.
+
 
 `Scene::process(float dt)` calls `physics_world_->update(dt)` and then syncs each collider's transform back to its `Object::model_`.
 
-### 6.3 Player capsule
+### ⬜ 6.3 Player capsule
 
 The player (camera) gets a capsule collider. `CameraFPS` movement becomes: compute desired velocity from input → apply to rigid body → let physics resolve → read back world-space position.
 
 This gives you wall collision for free, which is what you want for the labyrinth.
 
-### 6.4 Portal-aware physics
+### ⬜ 6.4 Portal-aware physics
 
 When a rigid body crosses a portal, its physics body teleports too. Same math as camera teleport in 4.2, applied to `rp3d::RigidBody::setTransform`.
 
@@ -318,7 +353,10 @@ When a rigid body crosses a portal, its physics body teleports too. Same math as
 
 **Goal: regressions get caught, the code is release-grade.**
 
-### 7.1 Unit tests (no GL context)
+### 🟡 7.1 Unit tests (no GL context)
+
+> Current suites in `Engine/tests/`: `PortalTransformTest`, `PortalCameraTest`, `FrustumTest`, `LogTest`, `ObjectBoundingSphereTest`, `PortalRendererStencilTest`, `HeightmapTest`. Still missing: `ClippingPlaneTest`, `TraversalTest`, `LabyrinthGeneratorTest` (the last two blocked on Phases 4 and 5 landing first).
+
 
 - `PortalTransformTest`: `getTransform()` produces a right-handed basis; `getCorners()` returns four coplanar points at expected offsets.
 - `PortalCameraTest`: `calculateDoorwayView` composed with `calculateDoorwayView` of the destination portal ≈ identity (round-trip invariant); `calculateMirrorView` applied twice ≈ identity.
@@ -326,19 +364,19 @@ When a rigid body crosses a portal, its physics body teleports too. Same math as
 - `TraversalTest`: `didCross` returns true for straight-through crossings and false for parallel movement.
 - `LabyrinthGeneratorTest`: same seed → same output; every cell reachable from every other cell.
 
-### 7.2 Headless scene-loader tests
+### ⬜ 7.2 Headless scene-loader tests
 
 Mock the GL calls (or run against a hidden GLFW context). Load each demo scene JSON, assert expected portal counts, destinations, object counts.
 
-### 7.3 Golden-image rendering tests
+### ⬜ 7.3 Golden-image rendering tests
 
 Create `Engine/tests/visual/` with small fixtures. Render to an offscreen FBO, read pixels, compare against a stored reference PNG with a tolerance (e.g. `libpng` + per-pixel diff ≤ 2%). Regenerate references with a `--update-golden` flag.
 
-### 7.4 CI
+### ⬜ 7.4 CI
 
 `.github/workflows/ci.yml` builds on Linux + macOS, runs `ctest`. Add `clang-format --dry-run --Werror` using the existing `.clang-format`.
 
-### 7.5 Documentation refresh
+### ⬜ 7.5 Documentation refresh
 
 - Replace the current `PORTAL_ENGINE_STATUS.md` with auto-generated status from this plan's phase completion.
 - Add `Engine/README.md` documenting how to link against `oEngine` in another project.

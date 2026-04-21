@@ -72,6 +72,14 @@ public:
 
   auto setupPhysics(reactphysics3d::PhysicsWorld *, reactphysics3d::PhysicsCommon *) -> void;
 
+  /// Horizontal movement speed in world-units per second (used by the base
+  /// Camera::processKeyboard, which integrates position_ directly). The default
+  /// `SPEED = 2.5` is tuned for small interior scenes; larger demos — terrains,
+  /// outdoor walks — will want to raise it so WASD feels like a walk rather
+  /// than a crawl. `CameraFPS` ignores this value, it uses `applyWorldForce`.
+  auto movementSpeed() const -> float { return movement_speed_; }
+  auto setMovementSpeed(float speed) -> void { movement_speed_ = speed; }
+
 protected:
   // camera Attributes
   glm::mat4x4 projection_matrix_;

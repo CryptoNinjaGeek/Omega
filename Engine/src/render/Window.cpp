@@ -405,6 +405,14 @@ bool Window::initGL() {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+  // Request an 8-bit stencil attachment on the default framebuffer. The
+  // stencil-based portal renderer (PortalRenderer::renderWithStencil) uses
+  // increment/decrement ops keyed on the portal recursion level, so we need
+  // enough stencil bits to cover `maxRecursionDepth_` (3 by default). 8 bits
+  // is the GLFW default on most platforms but worth asking for explicitly so
+  // platforms that default to 0 (some embedded / mobile configs) don't
+  // silently break the portal pass.
+  glfwWindowHint(GLFW_STENCIL_BITS, 8);
   m_window = glfwCreateWindow(m_width, m_height, "Open GL", NULL, NULL);
   if (!m_window) {
 	OMEGA_LOG_ERROR("window",

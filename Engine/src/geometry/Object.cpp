@@ -7,6 +7,8 @@
 #include <render/Texture.h>
 #include <system/Log.h>
 
+#include <algorithm>
+
 #include "glm/gtx/string_cast.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
@@ -194,4 +196,29 @@ auto Object::process() -> void {
     transform.getOpenGLMatrix(mat);
     model_ = glm::make_mat4(mat);
   }
+}
+
+std::optional<BoundingSphere> Object::worldBoundingSphere() const {
+  if (!boundingSphere_) return std::nullopt;
+
+  const auto& local = *boundingSphere_;
+
+  // Transform the local center through the full model matrix (including
+  // translation). A vec4 with w=1.0 picks up the translation column.
+  const glm::vec4 worldCenter4 = model_ * glm::vec4(local.center, 1.0f);
+  const glm::vec3 worldCenter(worldCenter4);
+
+  // The three model-matrix basis columns carry the per-axis scale embedded
+  // in `model_` (model_ = T * R * S, so the upper-left 3x3 is R*S and each
+  // column has length |s_i|). Use the largest to scale the radius — this is
+  // the conservative bound for non-uniform scale: the resulting sphere
+  // still fully encloses the transformed mesh, at the cost of being a
+  // slightly looser fit than an ellipsoid-aware test would give.
+  const glm::vec3 col0(model_[0]);
+  const glm::vec3 col1(model_[1]);
+  const glm::vec3 col2(model_[2]);
+  const float maxScale = std::max({glm::length(col0), glm::length(col1),
+                                   glm::length(col2)});
+
+  return BoundingSphere{worldCenter, local.radius * maxScale};
 }

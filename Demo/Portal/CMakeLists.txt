@@ -37,6 +37,9 @@ add_custom_command(TARGET Portal POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/tunnel_scene.json
         ${CMAKE_SOURCE_DIR}/bin/tunnel_scene.json
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/showcase_scene.json
+        ${CMAKE_SOURCE_DIR}/bin/showcase_scene.json
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/Demo/Resources/shaders/portal.vs
         ${CMAKE_SOURCE_DIR}/bin/portal.vs
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

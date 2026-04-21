@@ -141,3 +141,69 @@ TEST(FrustumTest, PortalOffToTheSideIsCulled) {
   Portal portal({200.0f, 0.0f, -5.0f}, {-1.0f, 0.0f, 0.0f}, 2.0f, 2.0f);
   EXPECT_FALSE(PortalCamera::isInViewFrustum(portal, cam));
 }
+
+TEST(FrustumTest, SphereInFrontOfCameraIsNotCulled) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // Unit sphere five units in front of the camera — fully inside.
+  EXPECT_FALSE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(0.0f, 0.0f, -5.0f), 1.0f));
+}
+
+TEST(FrustumTest, SphereBehindCameraIsCulled) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // Sphere centred well behind the camera with a small radius — the near
+  // plane rejects it entirely.
+  EXPECT_TRUE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(0.0f, 0.0f, 50.0f), 1.0f));
+}
+
+TEST(FrustumTest, SphereStraddlingNearPlaneIsKept) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // Sphere of radius 2 sitting on the near plane (z = -0.1, radius 2 means
+  // it pokes both into and behind the frustum). No single plane fully
+  // rejects it, so the helper must keep it.
+  EXPECT_FALSE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(0.0f, 0.0f, 0.0f), 2.0f));
+}
+
+TEST(FrustumTest, SpherePastFarPlaneIsCulled) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // Sphere centred 500 units down -Z (far plane is at 100). Even a generous
+  // radius shouldn't be enough to reach the frustum.
+  EXPECT_TRUE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(0.0f, 0.0f, -500.0f), 50.0f));
+}
+
+TEST(FrustumTest, SphereOffToTheSideIsCulled) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // Sphere far off to the right, well outside a 60° FOV at z=-5.
+  EXPECT_TRUE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(200.0f, 0.0f, -5.0f), 1.0f));
+}
+
+TEST(FrustumTest, SphereLargeEnoughToReachFrustumIsKept) {
+  Camera cam = makeForwardCamera();
+  const auto planes =
+      Frustum::extractPlanes(cam.projectionMatrix() * cam.viewMatrix());
+
+  // A sphere centred far to the right but with a radius large enough that
+  // it overlaps the frustum should NOT be culled. Sanity-check that the
+  // radius term is actually wired up in the test.
+  EXPECT_FALSE(Frustum::sphereOutsideAnyPlane(
+      planes, glm::vec3(50.0f, 0.0f, -5.0f), 200.0f));
+}

@@ -90,6 +90,32 @@ TEST(PortalTransformTest, MirrorFlagSetWhenDestinationIsSelf) {
   EXPECT_TRUE(portal->isMirror());
 }
 
+TEST(PortalTransformTest, MirrorOverlayDefaultsToOff) {
+  Portal portal;
+  EXPECT_FALSE(portal.hasMirrorOverlay());
+  // Default tint is white so that enabling the overlay with no custom
+  // tint is a no-op visually. Intensity default is a non-zero 0.5f so
+  // "flip the flag" gives a visible mix without additional setup.
+  EXPECT_TRUE(vec3Near(portal.getMirrorTint(), glm::vec3(1.0f)));
+  EXPECT_FLOAT_EQ(portal.getMirrorIntensity(), 0.5f);
+}
+
+TEST(PortalTransformTest, SetMirrorOverlayStoresTintAndIntensity) {
+  Portal portal;
+  // Phase 1.5 contract: setMirrorOverlay(enabled, intensity, tint) stores
+  // all three values so portal.fs can sample them per-frame.
+  portal.setMirrorOverlay(true, 0.8f, glm::vec3(0.6f, 0.7f, 0.8f));
+  EXPECT_TRUE(portal.hasMirrorOverlay());
+  EXPECT_FLOAT_EQ(portal.getMirrorIntensity(), 0.8f);
+  EXPECT_TRUE(vec3Near(portal.getMirrorTint(), glm::vec3(0.6f, 0.7f, 0.8f)));
+
+  // Flipping off retains the previously-set tint — downstream code may
+  // toggle the flag independently without re-authoring the tint.
+  portal.setMirrorOverlay(false, 0.8f, glm::vec3(0.6f, 0.7f, 0.8f));
+  EXPECT_FALSE(portal.hasMirrorOverlay());
+  EXPECT_TRUE(vec3Near(portal.getMirrorTint(), glm::vec3(0.6f, 0.7f, 0.8f)));
+}
+
 TEST(PortalTransformTest, FourCornersAreCoplanarWithPortalCenter) {
   // width=4, height=2, centered at (5, 1, -2) facing -Z. Off-origin so the
   // plane-equation check actually constrains w (at the origin, w = 0 and the

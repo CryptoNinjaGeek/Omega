@@ -2,7 +2,6 @@
 #include <system/FileSystem.h>
 #include <geometry/Scene.h>
 #include <geometry/Portal.h>
-#include <geometry/PortalPair.h>
 #include <geometry/PortalRenderer.h>
 #include <render/CameraFPS.h>
 #include <render/Shader.h>
@@ -50,7 +49,6 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
     auto json = nlohmann::json::parse(jsonString);
     
     // Clear previous state
-    portalPairs_.clear();
     portals_.clear();
     textures_.clear();
     materials_.clear();
@@ -120,23 +118,17 @@ std::shared_ptr<Scene> PortalSceneLoader::loadFromString(const std::string& json
       parsePortals(json["scene"]["portals"]);
     }
     
-    // Create and configure portal renderer if portals exist
-    if (!portalPairs_.empty() || !portals_.empty()) {
+    // Create and configure portal renderer if portals exist. Every portal
+    // now goes through the single doorway-based path; portals without a
+    // destination are skipped because `renderPortalViewRecursive` has
+    // nothing to render for them.
+    if (!portals_.empty()) {
       auto portalRenderer = std::make_shared<PortalRenderer>();
-      
-      // Add legacy PortalPairs (for backward compatibility)
-      for (auto& portalPair : portalPairs_) {
-        portalRenderer->addPortalPair(portalPair);
-      }
-      
-      // Add standalone portals (new doorway-based system)
       for (auto& [id, portal] : portals_) {
-        // Only add portals that have destinations set (new system)
         if (portal->getDestination()) {
           portalRenderer->addPortal(portal);
         }
       }
-      
       portalRenderer->setMaxRecursionDepth(3);  // Default recursion depth
       portalRenderer->setEnabled(true);
       scene->setPortalRenderer(portalRenderer);
@@ -620,10 +612,15 @@ void PortalSceneLoader::parsePortals(const nlohmann::json& json) {
     bool open = parseBool(portalJson, "open", true);
     bool mirrorOverlay = parseBool(portalJson, "mirrorOverlay", false);
     float mirrorIntensity = parseFloat(portalJson, "mirrorIntensity", 0.5f);
-    
+    // Phase 1.5 addition: per-portal tint applied by portal.fs when the
+    // overlay is enabled. Defaults to white so omitting the field keeps the
+    // overlay visually neutral (still takes the intensity mix, but base.rgb
+    // * vec3(1) is a no-op).
+    glm::vec3 mirrorTint = parseVec3(portalJson, "mirrorTint", glm::vec3(1.0f));
+
     portal->setPassable(passable);
     portal->setOpen(open);
-    portal->setMirrorOverlay(mirrorOverlay, mirrorIntensity);
+    portal->setMirrorOverlay(mirrorOverlay, mirrorIntensity, mirrorTint);
     
     // Parse framebuffer settings
     if (portalJson.contains("framebuffer") && portalJson["framebuffer"].is_object()) {
@@ -656,44 +653,20 @@ void PortalSceneLoader::parsePortals(const nlohmann::json& json) {
     
     auto portal = portals_[id];
     
-    // New format: destination (can be self for mirrors)
-    std::string destinationId = parseString(portalJson, "destination", "");
-    
-    // Legacy format: linkedTo (creates PortalPair)
-    std::string linkedTo = parseString(portalJson, "linkedTo", "");
-    
+    // Doorway-based destination. `destination == id` = self-linked mirror.
+    // A portal with no `destination` field is enabled but never traversed —
+    // the renderer will skip it in `renderPortalViewRecursive`.
+    const std::string destinationId = parseString(portalJson, "destination", "");
     if (!destinationId.empty()) {
-      // New doorway-based system
       if (destinationId == id) {
-        // Self-reference = mirror portal
         portal->setDestination(portal);
       } else if (portals_.find(destinationId) != portals_.end()) {
-        // Set destination to another portal
         portal->setDestination(portals_[destinationId]);
       } else {
         OMEGA_LOG_WARN("scene-loader",
                        "Portal destination '{}' not found for portal '{}'",
                        destinationId, id);
       }
-    } else if (!linkedTo.empty()) {
-      // Legacy PortalPair system (for backward compatibility)
-      if (portals_.find(linkedTo) == portals_.end()) {
-        OMEGA_LOG_WARN("scene-loader",
-                       "Portal link failed - portal '{}' or '{}' not found",
-                       id, linkedTo);
-        continue;
-      }
-      
-      auto portalA = portal;
-      auto portalB = portals_[linkedTo];
-      
-      // Also set destination for new system compatibility
-      portalA->setDestination(portalB);
-      portalB->setDestination(portalA);
-      
-      // Create portal pair (legacy)
-      auto pair = std::make_shared<PortalPair>(portalA, portalB);
-      portalPairs_.push_back(pair);
     }
   }
 }

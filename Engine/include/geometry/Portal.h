@@ -44,11 +44,10 @@ public:
   glm::vec3 getUp() const { return up_; }
   glm::vec3 getRight() const { return right_; }
 
-  // Linked portal (destination) - kept for backward compatibility
-  void setLinkedPortal(std::shared_ptr<Portal> portal) { linkedPortal_ = portal; }
-  std::shared_ptr<Portal> getLinkedPortal() const { return linkedPortal_; }
-
-  // Destination portal (new doorway-based system)
+  // Destination portal. A portal self-linked to itself (destination == this)
+  // is a mirror — see isMirror(). Portals loaded via PortalSceneLoader get
+  // this set from the scene JSON's `destination` field (or left null if the
+  // portal is never rendered/traversed).
   void setDestination(std::shared_ptr<Portal> dest) { destination_ = dest; }
   std::shared_ptr<Portal> getDestination() const { return destination_; }
 
@@ -79,13 +78,22 @@ public:
   void setPassable(bool passable) { isPassable_ = passable; }
   bool isPassable() const { return isPassable_; }
 
-  // Mirror overlay settings
-  void setMirrorOverlay(bool enabled, float intensity = 0.5f) {
+  // Mirror overlay settings (Phase 1.5).
+  //
+  // When enabled, `PortalRenderer::renderPortalSurface` uploads these values
+  // to `portal.fs` which tints the destination view by `intensity` toward
+  // `tint`. Default tint = (1, 1, 1) so that enabling the overlay without
+  // a bespoke tint behaves as a no-op — demos that want a classic greyscale
+  // mirror can pass (0.6, 0.7, 0.8) or similar.
+  void setMirrorOverlay(bool enabled, float intensity = 0.5f,
+                        const glm::vec3 &tint = glm::vec3(1.0f)) {
     hasMirrorOverlay_ = enabled;
     mirrorIntensity_ = intensity;
+    mirrorTint_ = tint;
   }
   bool hasMirrorOverlay() const { return hasMirrorOverlay_; }
   float getMirrorIntensity() const { return mirrorIntensity_; }
+  glm::vec3 getMirrorTint() const { return mirrorTint_; }
 
   // Visibility and culling helpers
   bool isVisibleFrom(const glm::vec3& position) const;
@@ -108,8 +116,7 @@ private:
   float width_{2.0f};
   float height_{2.0f};
 
-  std::shared_ptr<Portal> linkedPortal_{nullptr};  // Legacy: kept for backward compatibility
-  std::shared_ptr<Portal> destination_{nullptr};   // New: doorway-based destination
+  std::shared_ptr<Portal> destination_{nullptr};   // Doorway-based destination (self == mirror)
   std::shared_ptr<render::PortalFramebuffer> framebuffer_{nullptr};
 
   bool visible_{true};
@@ -118,6 +125,10 @@ private:
   bool isPassable_{true};       // Can entities walk through this portal?
   bool hasMirrorOverlay_{false}; // Optional mirror effect overlay
   float mirrorIntensity_{0.5f};  // Mirror overlay intensity (0.0 = transparent, 1.0 = full mirror)
+  // Per-portal colour applied to the destination view when the overlay is
+  // on. Defaults to white so enabling the overlay without setting a tint is
+  // a no-op; see setMirrorOverlay().
+  glm::vec3 mirrorTint_{1.0f, 1.0f, 1.0f};
 };
 
 }  // namespace geometry

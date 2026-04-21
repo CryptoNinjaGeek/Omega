@@ -137,9 +137,9 @@ For `type: "mesh"` with `vertices` and `indices` properties, define geometry man
 
 ## Portals
 
-Array of portal definitions. Portals can be defined using either the **legacy PortalPair format** (backward compatible) or the **new doorway-based format**.
+Array of portal definitions. As of Phase 2 (2026-04-21) there is only one supported format — the doorway-based model — and every portal carries its own `destination` (set to the portal's own `id` for mirrors, omitted to leave the portal enabled but non-traversable). The legacy `linkedTo` / `PortalPair` branch has been removed.
 
-### New Doorway-Based Format (Recommended)
+### Doorway-Based Format
 
 ```json
 {
@@ -158,6 +158,7 @@ Array of portal definitions. Portals can be defined using either the **legacy Po
   "open": true,  // Is the doorway open? (for doors)
   "mirrorOverlay": false,  // Optional mirror effect overlay
   "mirrorIntensity": 0.5,  // Mirror overlay intensity (0.0-1.0)
+  "mirrorTint": [1.0, 1.0, 1.0],  // RGB tint applied in portal.fs (default: white)
   "enabled": true,
   "visible": true,
   "framebuffer": {
@@ -181,27 +182,9 @@ Array of portal definitions. Portals can be defined using either the **legacy Po
   "open": true,
   "mirrorOverlay": true,
   "mirrorIntensity": 0.7,
+  "mirrorTint": [0.6, 0.7, 0.8],  // Cool-blue tint for a classic glass look
   "enabled": true,
   "visible": true
-}
-```
-
-### Legacy PortalPair Format (Backward Compatible)
-
-```json
-{
-  "id": "portal_a",
-  "position": [x, y, z],
-  "normal": [0, 0, -1],
-  "width": 2.0,
-  "height": 3.0,
-  "linkedTo": "portal_b",  // Creates PortalPair (legacy)
-  "enabled": true,
-  "visible": true,
-  "framebuffer": {
-    "width": 1024,
-    "height": 1024
-  }
 }
 ```
 
@@ -219,16 +202,18 @@ Array of portal definitions. Portals can be defined using either the **legacy Po
 - `width`: Portal width in world units (default: 2.0)
 - `height`: Portal height in world units (default: 3.0)
 
-**Connection (choose one):**
-- `destination`: ID of destination portal (new format) - can be self for mirrors
-- `linkedTo`: ID of portal to link with (legacy format, creates PortalPair)
+**Connection:**
+- `destination`: ID of destination portal — can equal this portal's own `id` for a self-linked mirror, or be omitted to leave the portal enabled but never rendered/traversed.
 
-**Portal Type (new format):**
+**Portal Type:**
 - `type`: "doorway" | "mirror" | "window" (default: "doorway")
 - `passable`: Whether entities can walk through (default: true)
 - `open`: Whether the doorway is open (default: true)
 - `mirrorOverlay`: Enable mirror effect overlay (default: false)
 - `mirrorIntensity`: Mirror overlay intensity 0.0-1.0 (default: 0.5)
+- `mirrorTint`: RGB tint multiplied into the destination view when
+  `mirrorOverlay` is on (default: `[1, 1, 1]`, a no-op). `portal.fs`
+  computes `mix(base.rgb, base.rgb * mirrorTint, mirrorIntensity)`.
 
 **State:**
 - `enabled`: Whether portal is active (default: true)
@@ -370,7 +355,9 @@ Map of texture definitions:
         "normal": [1, 0, 0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_right",
+        "destination": "portal_right",
+        "passable": true,
+        "open": true,
         "enabled": true
       },
       {
@@ -380,7 +367,9 @@ Map of texture definitions:
         "normal": [-1, 0, 0],
         "width": 2.0,
         "height": 3.0,
-        "linkedTo": "portal_left",
+        "destination": "portal_left",
+        "passable": true,
+        "open": true,
         "enabled": true
       }
     ],

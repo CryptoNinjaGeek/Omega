@@ -3,7 +3,6 @@
 #include <system/Global.h>
 #include <geometry/Scene.h>
 #include <geometry/Portal.h>
-#include <geometry/PortalPair.h>
 #include <render/Camera.h>
 #include <render/Shader.h>
 #include <render/Texture.h>
@@ -59,10 +58,16 @@ public:
   std::shared_ptr<geometry::Scene> loadFromString(const std::string& jsonString);
 
   /**
-   * Get loaded portal pairs
+   * Get all standalone portals keyed by their JSON `id`.
+   *
+   * Returned by value (it's a map of shared_ptr — cheap) so callers can
+   * look up named portals and tweak them at runtime (e.g. demos toggling
+   * mirror overlays or opening a closed doorway on a hotkey). The scene
+   * format is now exclusively the doorway-based model: each portal declares
+   * its own `destination` field (or omits it to be non-traversable).
    */
-  std::vector<std::shared_ptr<geometry::PortalPair>> getPortalPairs() const {
-    return portalPairs_;
+  std::map<std::string, std::shared_ptr<geometry::Portal>> getPortals() const {
+    return portals_;
   }
 
   /**
@@ -85,7 +90,6 @@ private:
   void parseTextures(const nlohmann::json& json);
   void parseCamera(const nlohmann::json& json);
 
-  std::vector<std::shared_ptr<geometry::PortalPair>> portalPairs_;
   std::map<std::string, std::shared_ptr<geometry::Portal>> portals_;
   std::map<std::string, std::shared_ptr<render::Texture>> textures_;
   std::map<std::string, render::Material> materials_;

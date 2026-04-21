@@ -83,7 +83,9 @@ TEST(PortalCameraTest, VisibilityCheckRequiresFacingPortal) {
 }
 
 TEST(PortalCameraTest, MirrorViewIsFinite) {
-  // Self-destined portal is a mirror; the view matrix must be computable.
+  // Self-destined portal is a mirror; the unified entry point dispatches to
+  // the internal mirror path. Post-Phase 2.2 this is the only public entry,
+  // so the test drives it directly.
   auto portal = std::make_shared<Portal>(glm::vec3(0.0f, 0.0f, 0.0f),
                                          glm::vec3(0.0f, 0.0f, 1.0f));
   portal->setDestination(portal);
@@ -93,7 +95,7 @@ TEST(PortalCameraTest, MirrorViewIsFinite) {
   cam.setLookAt({0.0f, 1.0f, 0.0f});
   cam.setPerspective(45.0f, 1280.0f, 720.0f, 0.1f, 100.0f);
 
-  const glm::mat4 view = PortalCamera::calculateMirrorView(cam, *portal);
+  const glm::mat4 view = PortalCamera::calculatePortalViewUnified(cam, *portal);
   // Expect every element finite.
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
@@ -101,6 +103,86 @@ TEST(PortalCameraTest, MirrorViewIsFinite) {
           << "non-finite at (" << i << "," << j << ")";
     }
   }
+}
+
+TEST(PortalCameraTest, CalculatePortalViewPlacesCameraThroughPairedPortals) {
+  // Demo layout: two portals on opposite walls, facing each other.
+  //   portal_left  at (-4, 1.5, 0) normal (+1, 0, 0)
+  //   portal_right at (+4, 1.5, 0) normal (-1, 0, 0)
+  // Player at room centre-ish, looking -Z. Looking through portal_left
+  // should render the scene from a virtual camera placed the same distance
+  // BEHIND portal_right (on its -normal side, outside the room) as the
+  // player is in front of portal_left.
+  //
+  // For player at (0, 1.5, 5):
+  //   source-local offset = (+right=5, +up=0, +into-portal=-4)
+  //   after 180° flip about local up: (-5, 0, +4)
+  //   re-expressed in destination world: virtual pos = (8, 1.5, 5)
+  //   virtual forward: still -Z (the two portals' rotations cancel via R_180y).
+  //
+  // Phase 2: the triple-arg `calculatePortalView(camera, src, dst)` was
+  // retired. We now build the doorway pair by setting `destination_` on
+  // each portal and invoking the unified entry point.
+  auto portalLeft =
+      std::make_shared<Portal>(glm::vec3(-4.0f, 1.5f, 0.0f),
+                               glm::vec3(1.0f, 0.0f, 0.0f), 2.0f, 3.0f);
+  auto portalRight =
+      std::make_shared<Portal>(glm::vec3(4.0f, 1.5f, 0.0f),
+                               glm::vec3(-1.0f, 0.0f, 0.0f), 2.0f, 3.0f);
+  portalLeft->setDestination(portalRight);
+  portalRight->setDestination(portalLeft);
+
+  Camera player(/*posX=*/0.0f, /*posY=*/1.5f, /*posZ=*/5.0f,
+                /*upX=*/0.0f, /*upY=*/1.0f, /*upZ=*/0.0f,
+                /*yaw=*/-90.0f, /*pitch=*/0.0f);
+  player.setPerspective(60.0f, 1280.0f, 720.0f, 0.1f, 100.0f);
+
+  const glm::mat4 portalView =
+      PortalCamera::calculatePortalViewUnified(player, *portalLeft);
+
+  // Derive the virtual camera's world-space position by inverting the view.
+  const glm::mat4 virtualWorld = glm::inverse(portalView);
+  const glm::vec3 virtualPos(virtualWorld[3]);
+
+  EXPECT_NEAR(virtualPos.x, 8.0f, kEps);
+  EXPECT_NEAR(virtualPos.y, 1.5f, kEps);
+  EXPECT_NEAR(virtualPos.z, 5.0f, kEps);
+
+  // Virtual camera should still be looking down -Z. Column 2 of the world
+  // matrix is -front (OpenGL convention), so front = -col2.
+  const glm::vec3 virtualFront = -glm::normalize(glm::vec3(virtualWorld[2]));
+  EXPECT_NEAR(virtualFront.x, 0.0f, kEps);
+  EXPECT_NEAR(virtualFront.y, 0.0f, kEps);
+  EXPECT_NEAR(virtualFront.z, -1.0f, kEps);
+}
+
+TEST(PortalCameraTest, PortalTransformHasBasisInColumns) {
+  // Portal::getTransform() must return a proper local-to-world matrix:
+  //   col 0 = right, col 1 = up, col 2 = -normal, col 3 = position
+  // A prior bug stored the basis as rows, which silently inverted the
+  // rotation and broke through-portal math.
+  Portal portal({1.0f, 2.0f, 3.0f}, {1.0f, 0.0f, 0.0f});
+  const glm::mat4 t = portal.getTransform();
+
+  const glm::vec3 col0(t[0]);
+  const glm::vec3 col1(t[1]);
+  const glm::vec3 col2(t[2]);
+  const glm::vec3 col3(t[3]);
+
+  EXPECT_TRUE(vec3Near(col0, portal.getRight()));
+  EXPECT_TRUE(vec3Near(col1, portal.getUp()));
+  EXPECT_TRUE(vec3Near(col2, -portal.getNormal()));
+  EXPECT_TRUE(vec3Near(col3, portal.getPosition()));
+
+  // Local origin (0,0,0,1) should map to the portal's world position.
+  const glm::vec4 localOrigin(0.0f, 0.0f, 0.0f, 1.0f);
+  const glm::vec4 worldOrigin = t * localOrigin;
+  EXPECT_TRUE(vec3Near(glm::vec3(worldOrigin), portal.getPosition()));
+
+  // Local +X (1,0,0,0) — as a direction vector — should map to world `right`.
+  const glm::vec4 localX(1.0f, 0.0f, 0.0f, 0.0f);
+  const glm::vec4 worldX = t * localX;
+  EXPECT_TRUE(vec3Near(glm::vec3(worldX), portal.getRight()));
 }
 
 TEST(PortalCameraTest, CameraAccessorsReturnLastSetParameters) {

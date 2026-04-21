@@ -44,27 +44,25 @@ void Portal::updateVectors() {
 }
 
 glm::mat4 Portal::getTransform() const {
-  // Create transform matrix from portal orientation
-  glm::mat4 transform = glm::mat4(1.0f);
-
-  // Set rotation part (right, up, -normal form the basis)
-  transform[0][0] = right_.x;
-  transform[1][0] = right_.y;
-  transform[2][0] = right_.z;
-
-  transform[0][1] = up_.x;
-  transform[1][1] = up_.y;
-  transform[2][1] = up_.z;
-
-  transform[0][2] = -normal_.x;  // Negative normal (forward direction)
-  transform[1][2] = -normal_.y;
-  transform[2][2] = -normal_.z;
-
-  // Set translation
-  transform[3][0] = position_.x;
-  transform[3][1] = position_.y;
-  transform[3][2] = position_.z;
-
+  // Build a local-to-world (L2W) matrix for this portal.
+  //
+  // Local frame convention:
+  //   +X_local → right_     (across the portal face)
+  //   +Y_local → up_        (vertical on the portal face)
+  //   +Z_local → -normal_   ("through" the portal — the direction you'd walk
+  //                          to exit out the far side, i.e. opposite of the
+  //                          face that the normal points out of)
+  //   origin_local → position_
+  //
+  // NOTE on GLM indexing: glm::mat4[col][row], so m[0] is the first *column*.
+  // A proper L2W stores basis vectors as COLUMNS (not rows). The previous
+  // implementation stored them as rows, which produced the transpose of the
+  // intended rotation and broke downstream portal math — see PortalCamera.
+  glm::mat4 transform(1.0f);
+  transform[0] = glm::vec4(right_,    0.0f);    // column 0: world-space right
+  transform[1] = glm::vec4(up_,       0.0f);    // column 1: world-space up
+  transform[2] = glm::vec4(-normal_,  0.0f);    // column 2: "into" the portal
+  transform[3] = glm::vec4(position_, 1.0f);    // column 3: world position
   return transform;
 }
 

@@ -44,6 +44,13 @@ auto ObjectGenerator::plane(input::ObjectGenerator input)
 
   auto object = std::make_shared<Object>(cubeVAO, VBO, 6);
 
+  // Plane is flat on Y=0 and spans ±size on X and Z. The enclosing sphere
+  // around a flat square has radius `size * sqrt(2)`. We deliberately keep
+  // the sphere as-is rather than add a small Y fudge — the plane has zero
+  // thickness and planar geometry matches planar bounds.
+  object->setBoundingSphere(glm::vec3(0.0f),
+                            input.size * 1.4142136f /* sqrt(2) */);
+
   object->setTextures(input.textures);
   object->setShader(input.shader);
   object->setName(input.name);

@@ -21,6 +21,9 @@
 
 #include <reactphysics3d/reactphysics3d.h>
 
+#include <render/Frustum.h>
+
+#include <array>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -66,7 +69,43 @@ public:
 
   auto setCurrentCamera(unsigned int index) -> void;
   auto currentCamera() -> std::shared_ptr<Camera> { return cameras_[current_camera_]; }
-  
+
+  // Per-frame render statistics produced during the most recent main-scene
+  // traversal (Scene::render(camera)). Intended as a cheap perf signal for
+  // demos/debug overlays — not a stable public API.
+  //
+  //   considered      : every Object visited during the traversal.
+  //   drawn           : objects whose `render(camera)` was actually issued.
+  //   culledFrustum   : rejected because their bounding sphere lay fully
+  //                     outside at least one frustum plane.
+  //   drawnNoBounds   : drawn without a cull test because the Object had no
+  //                     bounding sphere (SkyBox, hand-authored sub-meshes).
+  //                     Tracked separately so you can tell "would have been
+  //                     culled but couldn't" from "genuinely visible".
+  //   clippingActive  : true iff GL_CLIP_DISTANCE0 was on for the pass — i.e.
+  //                     the vertex shader is clipping behind a portal plane.
+  struct RenderStats {
+    int considered{0};
+    int drawn{0};
+    int culledFrustum{0};
+    int drawnNoBounds{0};
+    bool clippingActive{false};
+  };
+  const RenderStats& lastRenderStats() const { return lastRenderStats_; }
+
+  // Performance logging toggle. When enabled, the scene accumulates the dt
+  // values handed to `process()` and the frame count completed by `render()`,
+  // and emits a single `perf` log line once per ~1 s summarising FPS + the
+  // most recent RenderStats. Off by default; turn on for demos, perf runs,
+  // and debugging. Cadence is fixed at 1 s — the goal is a steady human-
+  // readable stream, not a profiler.
+  //
+  // The report appears via the standard Log facility under the "scene"
+  // subsystem (`OMEGA_LOG_INFO("scene", ...)`), matching the rest of the
+  // engine's diagnostic output so it can be filtered the same way.
+  void setPerformanceLogging(bool enabled) { perfLoggingEnabled_ = enabled; }
+  bool isPerformanceLoggingEnabled() const { return perfLoggingEnabled_; }
+
   // Portal rendering support
   void setPortalRenderer(std::shared_ptr<PortalRenderer> renderer) { portalRenderer_ = renderer; }
   std::shared_ptr<PortalRenderer> getPortalRenderer() const { return portalRenderer_; }
@@ -119,6 +158,29 @@ protected:
   // Clipping plane state (see setActiveClippingPlane).
   glm::vec4 clippingPlane_{0.0f, 1.0f, 0.0f, 0.0f};
   bool clippingEnabled_{false};
+
+  // Per-pass view-frustum cache. Populated at the top of each
+  // `Scene::render(camera)` call and consulted by the ObjectNode traversal
+  // to skip any object whose bounding sphere is fully outside the frustum.
+  // Reset between passes so nested calls (main scene vs. portal views) do
+  // not leak planes from one into the other.
+  std::array<glm::vec4, render::Frustum::COUNT> activeFrustumPlanes_{};
+  bool activeFrustumValid_{false};
+
+  // Stats accumulated during the current pass, published to `lastRenderStats_`
+  // when `render(camera)` returns. Kept separate so readers don't see
+  // half-filled numbers if they race with rendering (not that we're threaded,
+  // but the invariant is cheap to preserve).
+  RenderStats currentRenderStats_{};
+  RenderStats lastRenderStats_{};
+
+  // Performance logging state. `perfAccumSeconds_` is fed by `process(dt)` and
+  // `perfFrameCount_` is incremented by `render()`. When the accumulator crosses
+  // 1 second we emit a log line and reset both counters. See
+  // setPerformanceLogging().
+  bool perfLoggingEnabled_{false};
+  float perfAccumSeconds_{0.0f};
+  int perfFrameCount_{0};
 };
 }  // namespace geometry
 }  // namespace omega

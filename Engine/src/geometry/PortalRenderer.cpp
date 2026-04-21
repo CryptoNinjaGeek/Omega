@@ -1,6 +1,5 @@
 #include <geometry/PortalRenderer.h>
 #include <geometry/Portal.h>
-#include <geometry/PortalPair.h>
 #include <geometry/PortalSurface.h>
 #include <geometry/Scene.h>
 #include <render/Camera.h>
@@ -64,12 +63,6 @@ std::shared_ptr<Shader> PortalRenderer::ensurePortalShader() {
   return portalShader_;
 }
 
-void PortalRenderer::addPortalPair(std::shared_ptr<PortalPair> portalPair) {
-  if (portalPair && portalPair->isValid()) {
-    portalPairs_.push_back(portalPair);
-  }
-}
-
 void PortalRenderer::addPortal(std::shared_ptr<Portal> portal) {
   if (portal) {
     portals_.push_back(portal);
@@ -77,7 +70,6 @@ void PortalRenderer::addPortal(std::shared_ptr<Portal> portal) {
 }
 
 void PortalRenderer::clearPortals() {
-  portalPairs_.clear();
   portals_.clear();
   activePortals_.clear();
 }
@@ -93,33 +85,10 @@ void PortalRenderer::renderPortals(std::shared_ptr<Scene> scene,
   activePortals_.clear();
 
   // Phase 1: Render portal views (back rendering) - BEFORE main scene
-  // This happens BEFORE the main scene so we can use the framebuffers when rendering surfaces
-
-  // Legacy: Render PortalPairs (for backward compatibility)
-  for (auto& portalPair : portalPairs_) {
-    if (!portalPair->isEnabled()) {
-      continue;
-    }
-
-    auto portalA = portalPair->getPortalA();
-    auto portalB = portalPair->getPortalB();
-
-    if (!portalA || !portalB) {
-      continue;
-    }
-
-    // Render portal A's view (what you see through portal A)
-    if (shouldRenderPortal(portalA, playerCamera, 0)) {
-      renderPortalView(portalA, portalB, scene, playerCamera, 0);
-    }
-
-    // Render portal B's view (what you see through portal B)
-    if (shouldRenderPortal(portalB, playerCamera, 0)) {
-      renderPortalView(portalB, portalA, scene, playerCamera, 0);
-    }
-  }
-
-  // New: Render standalone portals (doorway-based system)
+  // This happens BEFORE the main scene so we can use the framebuffers when
+  // rendering surfaces. Each portal carries its own `destination_`; mirrors
+  // (dest == self) and doorways are both handled by `renderPortalViewRecursive`
+  // via `PortalCamera::calculatePortalViewUnified`.
   for (auto& portal : portals_) {
     if (shouldRenderPortal(portal, playerCamera, 0)) {
       renderPortalViewRecursive(portal, scene, playerCamera, 0);
@@ -142,27 +111,7 @@ void PortalRenderer::renderPortalSurfaces(std::shared_ptr<Camera> playerCamera,
   }
 
   // Phase 2: Render portal surfaces (forward rendering) - AFTER main scene
-  // Render portal surfaces AFTER the main scene so they appear on top
-  
-  // Legacy: Render PortalPair surfaces
-  for (auto& portalPair : portalPairs_) {
-    if (!portalPair->isEnabled()) {
-      continue;
-    }
-
-    auto portalA = portalPair->getPortalA();
-    auto portalB = portalPair->getPortalB();
-
-    if (portalA && portalA->isVisible() && portalA->isEnabled()) {
-      renderPortalSurface(portalA, playerCamera, portalShader);
-    }
-
-    if (portalB && portalB->isVisible() && portalB->isEnabled()) {
-      renderPortalSurface(portalB, playerCamera, portalShader);
-    }
-  }
-
-  // New: Render standalone portal surfaces
+  // Render portal surfaces AFTER the main scene so they appear on top.
   for (auto& portal : portals_) {
     if (portal && portal->isVisible() && portal->isEnabled()) {
       renderPortalSurface(portal, playerCamera, portalShader);
@@ -191,19 +140,17 @@ void PortalRenderer::renderPortalView(std::shared_ptr<Portal> sourcePortal,
 
   // Bind portal framebuffer
   framebuffer->bind();
-  // Clear to a visible color to test framebuffer rendering
-  // Use a blue-green color so we can see if framebuffer is working
-  framebuffer->clear(0.2f, 0.5f, 0.8f, 1.0f);  // Blue-green background
+  // Clear the portal FBO to black with zero alpha so anything not covered
+  // by scene geometry composites cleanly onto the portal surface (and, for
+  // debugging, pixels that should have been filled stand out as obvious
+  // holes rather than a deceptive blue-green that used to be a wiring test).
+  framebuffer->clear(0.0f, 0.0f, 0.0f, 0.0f);
 
-  // Calculate portal camera view matrix
-  // Use unified method if source portal has destination set, otherwise use legacy method
-  glm::mat4 portalView;
-  if (sourcePortal->getDestination()) {
-    portalView = PortalCamera::calculatePortalViewUnified(*playerCamera, *sourcePortal);
-  } else {
-    portalView = PortalCamera::calculatePortalView(
-        *playerCamera, *sourcePortal, *destPortal);
-  }
+  // Calculate portal camera view matrix. All portals now carry their own
+  // destination_ (possibly == self for mirrors); the unified entry point
+  // handles both cases.
+  const glm::mat4 portalView =
+      PortalCamera::calculatePortalViewUnified(*playerCamera, *sourcePortal);
 
   // Create temporary camera with portal view
   auto portalCamera = std::make_shared<PortalViewCamera>(playerCamera, portalView);
@@ -370,6 +317,27 @@ void PortalRenderer::renderPortalSurface(std::shared_ptr<Portal> portal,
     OMEGA_LOG_WARN("portal", "model uniform not found");
   }
 
+  // Phase 1.5: push mirror-overlay parameters from the Portal into the
+  // shader. Uniforms are looked up via glGetUniformLocation rather than
+  // Shader::setX so that older portal.fs files (without these uniforms)
+  // simply skip the upload instead of logging a warning per frame.
+  const GLint mirrorEnabledLoc =
+      glGetUniformLocation(currentProgram, "hasMirrorOverlay");
+  if (mirrorEnabledLoc >= 0) {
+    glUniform1i(mirrorEnabledLoc, portal->hasMirrorOverlay() ? 1 : 0);
+  }
+  const GLint mirrorIntensityLoc =
+      glGetUniformLocation(currentProgram, "mirrorIntensity");
+  if (mirrorIntensityLoc >= 0) {
+    glUniform1f(mirrorIntensityLoc, portal->getMirrorIntensity());
+  }
+  const GLint mirrorTintLoc =
+      glGetUniformLocation(currentProgram, "mirrorTint");
+  if (mirrorTintLoc >= 0) {
+    const glm::vec3 tint = portal->getMirrorTint();
+    glUniform3f(mirrorTintLoc, tint.x, tint.y, tint.z);
+  }
+
   OMEGA_GL_CHECK("portal/renderPortalSurface: after setting uniforms");
 
   glEnable(GL_DEPTH_TEST);
@@ -439,6 +407,284 @@ bool PortalRenderer::shouldRenderPortal(std::shared_ptr<Portal> portal,
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Stencil-based nested portal rendering (Phase 1.4 option B).
+// ---------------------------------------------------------------------------
+//
+// The high-level shape of the algorithm is documented on
+// `PortalRenderer::renderWithStencil` in the header. These helpers are
+// intentionally small: each phase (increment, recurse, decrement, clear depth,
+// render world) maps to one contiguous GL state change + one draw call so the
+// state machine stays readable when debugging in a frame capture.
+
+void PortalRenderer::ensureStencilResources() {
+  if (!stencilOnlyShader_ || !stencilOnlyShader_->isValid()) {
+    // Minimal vertex shader: transform portal quad vertices by MVP. The
+    // fragment shader is empty — color writes are expected to be masked
+    // off by the caller, so we don't bother emitting a fragment.
+    const std::string vs =
+        "#version 330 core\n"
+        "layout (location = 0) in vec3 aPos;\n"
+        "uniform mat4 model;\n"
+        "uniform mat4 view;\n"
+        "uniform mat4 projection;\n"
+        "void main() {\n"
+        "  gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+        "}\n";
+    const std::string fs =
+        "#version 330 core\n"
+        "void main() {}\n";
+    stencilOnlyShader_ = Shader::fromString(3, 3, vs, fs);
+    if (!stencilOnlyShader_ || !stencilOnlyShader_->isValid()) {
+      OMEGA_LOG_ERROR("portal", "Failed to compile stencil-only shader");
+      stencilOnlyShader_.reset();
+    }
+  }
+
+  if (!depthClearShader_ || !depthClearShader_->isValid()) {
+    // Fullscreen NDC quad at z=1 (far plane). Used inside the stencil mask
+    // to reset depth before rendering the level-L scene over the level-N
+    // render we produced during recursion.
+    const std::string vs =
+        "#version 330 core\n"
+        "layout (location = 0) in vec2 aPos;\n"
+        "void main() {\n"
+        "  gl_Position = vec4(aPos, 1.0, 1.0);\n"
+        "}\n";
+    const std::string fs =
+        "#version 330 core\n"
+        "void main() {}\n";
+    depthClearShader_ = Shader::fromString(3, 3, vs, fs);
+    if (!depthClearShader_ || !depthClearShader_->isValid()) {
+      OMEGA_LOG_ERROR("portal", "Failed to compile depth-clear shader");
+      depthClearShader_.reset();
+    }
+  }
+
+  if (fullscreenQuadVAO_ == 0) {
+    // Triangle strip covering NDC [-1,1]^2. Drawn with GL_TRIANGLE_STRIP
+    // over four vertices.
+    const float quad[] = {
+      -1.0f, -1.0f,
+       1.0f, -1.0f,
+      -1.0f,  1.0f,
+       1.0f,  1.0f,
+    };
+    glGenVertexArrays(1, &fullscreenQuadVAO_);
+    glGenBuffers(1, &fullscreenQuadVBO_);
+    glBindVertexArray(fullscreenQuadVAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, fullscreenQuadVBO_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
+                          (void *)0);
+    glBindVertexArray(0);
+  }
+}
+
+std::shared_ptr<Object> PortalRenderer::ensurePortalQuadObject(
+    std::shared_ptr<Portal> portal) {
+  if (!portal) return nullptr;
+  auto it = portalSurfaces_.find(portal);
+  if (it != portalSurfaces_.end()) return it->second;
+  // PortalSurface::createSurface emits a position/normal/uv vertex stream;
+  // attrib 0 is position which is the only one we read in the stencil-only
+  // shader. We pass nullptr for the shader because the Object here is only
+  // used as a VAO container — rendering goes through our own shader path.
+  auto obj = PortalSurface::createSurface(portal, nullptr);
+  if (obj) portalSurfaces_[portal] = obj;
+  return obj;
+}
+
+void PortalRenderer::drawPortalQuadStencilOnly(
+    std::shared_ptr<Portal> portal, std::shared_ptr<Camera> camera) {
+  if (!portal || !camera || !stencilOnlyShader_) return;
+
+  auto surfaceObj = ensurePortalQuadObject(portal);
+  if (!surfaceObj) return;
+
+  const unsigned int vao = surfaceObj->getVAO();
+  const unsigned int count = surfaceObj->getCount();
+  const ObjectType type = surfaceObj->getType();
+  if (vao == 0 || count == 0) return;
+
+  stencilOnlyShader_->use();
+  // Portal quad vertices are baked in world space by PortalSurface, so the
+  // model matrix is effectively the object's `model_` (identity by default,
+  // but we forward it for correctness in case a future pass starts
+  // transforming portal objects).
+  glm::mat4 projection = camera->projectionMatrix();
+  glm::mat4 view = camera->viewMatrix();
+  glm::mat4 model = surfaceObj->getModel();
+  stencilOnlyShader_->setMat4fv("projection", projection);
+  stencilOnlyShader_->setMat4fv("view", view);
+  stencilOnlyShader_->setMat4fv("model", model);
+
+  glBindVertexArray(vao);
+  if (type == ObjectType::Elements) {
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
+  } else {
+    glDrawArrays(GL_TRIANGLES, 0, count);
+  }
+  glBindVertexArray(0);
+}
+
+void PortalRenderer::drawDepthClearFullscreenQuad() {
+  if (!depthClearShader_ || fullscreenQuadVAO_ == 0) return;
+  depthClearShader_->use();
+  glBindVertexArray(fullscreenQuadVAO_);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindVertexArray(0);
+}
+
+std::vector<std::shared_ptr<Portal>> PortalRenderer::gatherVisiblePortals(
+    std::shared_ptr<Camera> camera,
+    std::shared_ptr<Portal> peerPortal) const {
+  std::vector<std::shared_ptr<Portal>> out;
+  if (!camera) return out;
+
+  auto consider = [&](const std::shared_ptr<Portal> &portal) {
+    if (!portal) return;
+    // Don't stencil the pair we just came through — that would immediately
+    // recurse back into the current level on the next step.
+    if (portal == peerPortal) return;
+    if (peerPortal && portal == peerPortal->getDestination()) return;
+    if (!portal->isOpen() || !portal->isEnabled()) return;
+    if (!PortalCamera::isPortalVisible(*portal, *camera)) return;
+    if (!PortalCamera::isInViewFrustum(*portal, *camera)) return;
+    // activePortals_ is updated by the recursive caller so nested calls
+    // skip anything already in-flight higher up the stack.
+    if (activePortals_.count(portal) > 0) return;
+    out.push_back(portal);
+  };
+
+  for (auto &portal : portals_) consider(portal);
+  return out;
+}
+
+void PortalRenderer::renderWithStencil(std::shared_ptr<Scene> scene,
+                                       std::shared_ptr<Camera> camera) {
+  if (!enabled_ || !scene || !camera) return;
+
+  activePortals_.clear();
+  ensureStencilResources();
+  if (!stencilOnlyShader_ || !depthClearShader_ || fullscreenQuadVAO_ == 0) {
+    OMEGA_LOG_ERROR(
+        "portal",
+        "Stencil resources failed to initialise; skipping portal pass");
+    return;
+  }
+
+  // Clear the whole target (color + depth + stencil) for the recursion
+  // frame. We do this here rather than relying on the caller because the
+  // stencil algorithm needs a known zero-value starting point for its
+  // reference-level counting.
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClearStencil(0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+  glEnable(GL_STENCIL_TEST);
+  // Ensure stencil writes are unmasked by default — individual phases below
+  // tighten or slacken this, but we want a clean baseline in case the last
+  // frame left some other mask in place.
+  glStencilMask(0xFF);
+
+  drawPortalsStencil(scene, camera, 0, nullptr);
+
+  glDisable(GL_STENCIL_TEST);
+  glStencilMask(0xFF);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glDepthMask(GL_TRUE);
+}
+
+void PortalRenderer::drawPortalsStencil(std::shared_ptr<Scene> scene,
+                                        std::shared_ptr<Camera> camera,
+                                        int level,
+                                        std::shared_ptr<Portal> peerPortal) {
+  if (!scene || !camera) return;
+
+  // Collect the portals we can see from this camera at this level.
+  // peerPortal excludes itself + its destination to block immediate A↔B
+  // loops; activePortals_ blocks deeper cycles.
+  const auto visiblePortals = gatherVisiblePortals(camera, peerPortal);
+
+  // --- Phase 1: for each visible portal, stencil-mask it, recurse, unmask.
+  for (auto &portal : visiblePortals) {
+    activePortals_.insert(portal);
+
+    // 1a. Increment stencil inside the portal quad where it currently
+    // equals `level`. Color and depth are frozen.
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_FALSE);
+    glStencilFunc(GL_EQUAL, level, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+    glStencilMask(0xFF);
+    drawPortalQuadStencilOnly(portal, camera);
+
+    // 1b. Recurse into the destination if we still have depth budget.
+    if (level + 1 < maxRecursionDepth_) {
+      auto dest = portal->getDestination();
+      if (dest) {
+        // All portals now carry their own destination_. The unified helper
+        // handles mirror (dest == self) and doorway (dest != self) cases.
+        const glm::mat4 virtualView =
+            PortalCamera::calculatePortalViewUnified(*camera, *portal);
+        // PortalViewCamera inherits the base camera's projection matrix
+        // (which already has the correct window aspect ratio baked in) —
+        // no `setPerspective` needed when rendering into the main
+        // framebuffer.
+        auto virtualCam =
+            std::make_shared<PortalViewCamera>(camera, virtualView);
+        drawPortalsStencil(scene, virtualCam, level + 1, dest);
+      }
+    }
+
+    // 1c. Decrement the stencil so sibling portals (and the parent level)
+    // see the counter at `level` again. The DECR is gated on (stencil ==
+    // level+1) to only touch pixels we just incremented — sibling portals
+    // that overlapped us would have their own increments preserved.
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_FALSE);
+    glStencilFunc(GL_EQUAL, level + 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
+    glStencilMask(0xFF);
+    drawPortalQuadStencilOnly(portal, camera);
+
+    activePortals_.erase(portal);
+  }
+
+  // --- Phase 2: reset depth inside the level-L mask.
+  // After all the recursive renders above, the depth buffer inside the
+  // portal quads holds fragments from the deepest level we drew. We need
+  // the level-L scene render in phase 3 to occlude those, so we force the
+  // depth back to 1.0 (far plane) in the level-L mask.
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+  glDepthMask(GL_TRUE);
+  glStencilFunc(GL_EQUAL, level, 0xFF);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+  glStencilMask(0x00);  // don't touch stencil during the depth clear
+  glDepthFunc(GL_ALWAYS);
+  drawDepthClearFullscreenQuad();
+  glDepthFunc(GL_LESS);
+
+  // --- Phase 3: render the scene at this level, constrained by stencil.
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glDepthMask(GL_TRUE);
+  glStencilFunc(GL_EQUAL, level, 0xFF);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+  glStencilMask(0x00);
+
+  if (peerPortal) {
+    // Level > 0: clip to the destination portal's half-space so geometry
+    // on the "camera side" of the destination doesn't peek through.
+    scene->setActiveClippingPlane(peerPortal->getClippingPlane(), true);
+  }
+  scene->render(camera);
+  if (peerPortal) {
+    scene->setActiveClippingPlane(glm::vec4(0.0f, 1.0f, 0.0f, 0.0f), false);
+  }
+}
+
 void PortalRenderer::renderPortalViewRecursive(std::shared_ptr<Portal> portal,
                                               std::shared_ptr<Scene> scene,
                                               std::shared_ptr<Camera> playerCamera,
@@ -450,48 +696,18 @@ void PortalRenderer::renderPortalViewRecursive(std::shared_ptr<Portal> portal,
   // Mark portal as being rendered
   activePortals_.insert(portal);
 
-  // Get destination portal
+  // Get destination portal (may be self for mirrors, or null for portals
+  // that are enabled but never linked — in which case skip).
   auto dest = portal->getDestination();
   if (!dest) {
-    // Fallback: use linked portal for backward compatibility
-    dest = portal->getLinkedPortal();
-    if (!dest) {
-      activePortals_.erase(portal);
-      return;  // No destination
-    }
+    activePortals_.erase(portal);
+    return;
   }
 
   // Render portal view
   renderPortalView(portal, dest, scene, playerCamera, recursionDepth);
 
-  // Recursively render nested portals visible through this portal
-  // Check all portals in the scene (both PortalPairs and standalone)
-  for (auto& nestedPair : portalPairs_) {
-    if (!nestedPair->isEnabled()) {
-      continue;
-    }
-    auto nestedA = nestedPair->getPortalA();
-    auto nestedB = nestedPair->getPortalB();
-    
-    // Skip source and destination portals to avoid immediate loops
-    if (nestedA == portal || nestedA == dest || nestedB == portal || nestedB == dest) {
-      continue;
-    }
-
-    // Create a temporary portal camera for visibility checks
-    glm::mat4 portalView = PortalCamera::calculatePortalViewUnified(*playerCamera, *portal);
-    auto portalCamera = std::make_shared<PortalViewCamera>(playerCamera, portalView);
-
-    // Check nested portals
-    if (nestedA && shouldRenderPortal(nestedA, portalCamera, recursionDepth + 1)) {
-      renderPortalViewRecursive(nestedA, scene, portalCamera, recursionDepth + 1);
-    }
-    if (nestedB && shouldRenderPortal(nestedB, portalCamera, recursionDepth + 1)) {
-      renderPortalViewRecursive(nestedB, scene, portalCamera, recursionDepth + 1);
-    }
-  }
-
-  // Check standalone portals
+  // Recursively render nested portals visible through this portal.
   for (auto& nestedPortal : portals_) {
     // Skip source and destination portals
     if (nestedPortal == portal || nestedPortal == dest) {
