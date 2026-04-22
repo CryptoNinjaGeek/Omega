@@ -72,17 +72,28 @@ TEST(PropCollidersTest, PushRespectsSeparationDirection) {
 }
 
 TEST(PropCollidersTest, TwoOverlappingSpheresResolveWithIterations) {
-  // Two spheres touching each other; actor sits in the narrow crossing zone
-  // between them. A single iteration against one will re-overlap the other.
-  // Two iterations should land the actor in the gap between them.
+  // Two spheres tangent on the X axis; the actor sits in the narrow crossing
+  // zone between them. A non-zero actor radius makes the keep-out circles
+  // genuinely overlap (the geometric spheres themselves are only tangent), and
+  // a small Z offset breaks the perfect radial symmetry so the iterative push
+  // can converge perpendicular to the contact axis instead of oscillating
+  // along it. A single iteration against one sphere will re-overlap the
+  // other; multiple iterations should land the actor outside both keep-out
+  // circles — i.e. at least one sphere-boundary distance away from the
+  // contact axis at the origin.
   PropColliderSet set;
   set.add(glm::vec3(-1.0f, 0.0f, 0.0f), 1.0f);
   set.add(glm::vec3( 1.0f, 0.0f, 0.0f), 1.0f);
-  // Actor at origin with radius 0 — symmetric between the two spheres.
-  const glm::vec2 out = set.resolveXZ(glm::vec2(0.0f, 0.0f), 0.0f, 4);
+  // Actor at (0, 0.1) with radius 0.5 — keep-out distance from each centre is
+  // 1.5, well inside the actor's starting position of distance ~1.005 from
+  // each sphere centre.
+  const glm::vec2 out = set.resolveXZ(glm::vec2(0.0f, 0.1f), 0.5f, 4);
   // We don't mandate a specific direction for symmetric pushes, but the
   // magnitude must be at least 1.0 (the sphere boundary) in some direction.
   EXPECT_GE(glm::length(out), 1.0f - kEps);
+  // And the actor must end up outside both keep-out circles.
+  EXPECT_GE(glm::length(out - glm::vec2(-1.0f, 0.0f)), 1.5f - kEps);
+  EXPECT_GE(glm::length(out - glm::vec2( 1.0f, 0.0f)), 1.5f - kEps);
 }
 
 TEST(PropCollidersTest, ActorExactlyOnSphereCentreGetsNonZeroPush) {
